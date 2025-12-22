@@ -1,5 +1,7 @@
 package com.example.catchme.controller;
 
+import com.example.catchme.dto.LoginRequest;
+import com.example.catchme.dto.LoginResponse;
 import com.example.catchme.dto.SignupRequest;
 import com.example.catchme.service.interfaces.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -28,4 +30,13 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
 
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @RequestBody LoginRequest request
+    ) {
+        return ResponseEntity.ok(authService.login(request));
+    }
+
+
 }

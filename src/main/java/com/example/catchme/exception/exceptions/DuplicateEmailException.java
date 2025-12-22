@@ -1,4 +1,4 @@
-package com.example.catchme.exception;
+package com.example.catchme.exception.exceptions;
 
 public class DuplicateEmailException extends RuntimeException {
     public DuplicateEmailException(String message) {
