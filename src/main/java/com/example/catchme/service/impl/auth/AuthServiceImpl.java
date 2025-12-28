@@ -77,6 +77,6 @@ public class AuthServiceImpl implements AuthService {
                 tokenProvider.generateToken(user, ACCESS_TOKEN_DURATION);
 
         // 4️⃣ JSON 응답
-        return new LoginResponse(accessToken);
+        return new LoginResponse(accessToken,user.getRole().name());
     }
 }

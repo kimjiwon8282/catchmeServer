@@ -41,7 +41,9 @@ public class User implements UserDetails {
     private Role role;
 
     /** 보호자 연동 (초기 단순화) */
-    private Long guardianId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "linked_user_id")
+    private User linkedUser;
 
     @Builder
     public User(String email, String password, String name, Role role) {
@@ -98,4 +100,6 @@ public class User implements UserDetails {
     public void changePassword(String encode) {
         this.password = encode;
     }
+
+    public void setLinkedUser(User user) {this.linkedUser = user;}
 }

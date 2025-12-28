@@ -72,6 +72,16 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
     }
 
+    /**
+     * 비즈니스 상태 오류
+     * → 409 Conflict
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(
+            IllegalStateException e
+    ) {
+        return buildErrorResponse(HttpStatus.CONFLICT, e.getMessage());
+    }
 
     /**
      * 잘못된 요청 값

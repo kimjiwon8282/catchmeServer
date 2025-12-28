@@ -28,6 +28,14 @@ public class TestDataInitializer {
                 .role(Role.USER)
                 .build();
 
+        User user2 = User.builder()
+                .email("test1@test.com")
+                .password(passwordEncoder.encode("1234"))
+                .name("보호자 유저")
+                .role(Role.GUARDIAN)
+                .build();
+
         userRepository.save(user);
+        userRepository.save(user2);
     }
 }
