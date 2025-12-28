@@ -1,4 +1,4 @@
-package com.example.catchme.service.impl;
+package com.example.catchme.service.impl.user;
 
 import com.example.catchme.dto.NameUpdateRequest;
 import com.example.catchme.dto.PasswordUpdateRequest;
@@ -6,7 +6,7 @@ import com.example.catchme.exception.exceptions.InvalidPasswordException;
 import com.example.catchme.exception.exceptions.UserNotFoundException;
 import com.example.catchme.model.User;
 import com.example.catchme.repository.UserRepository;
-import com.example.catchme.service.interfaces.UserService;
+import com.example.catchme.service.interfaces.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

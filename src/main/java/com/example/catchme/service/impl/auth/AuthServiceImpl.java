@@ -1,4 +1,4 @@
-package com.example.catchme.service.impl;
+package com.example.catchme.service.impl.auth;
 
 import com.example.catchme.config.auth.TokenProvider;
 import com.example.catchme.dto.LoginRequest;
@@ -9,7 +9,7 @@ import com.example.catchme.exception.exceptions.InvalidLoginException;
 import com.example.catchme.model.Role;
 import com.example.catchme.model.User;
 import com.example.catchme.repository.UserRepository;
-import com.example.catchme.service.interfaces.AuthService;
+import com.example.catchme.service.interfaces.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

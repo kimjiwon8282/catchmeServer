@@ -1,9 +1,6 @@
 package com.example.catchme.exception;
 
-import com.example.catchme.exception.exceptions.DuplicateEmailException;
-import com.example.catchme.exception.exceptions.InvalidLoginException;
-import com.example.catchme.exception.exceptions.InvalidPasswordException;
-import com.example.catchme.exception.exceptions.UserNotFoundException;
+import com.example.catchme.exception.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -53,6 +50,28 @@ public class GlobalExceptionHandler {
     ) {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
+    //cvs 파일 생성 시 예외 발생
+    @ExceptionHandler(IllegalCsvCreateException.class)
+    public ResponseEntity<Map<String, Object>> handleCsvCreateFail(
+            IllegalCsvCreateException e
+    ) {
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+    }
+    //csv파일 로컬 삭제 실패
+    @ExceptionHandler(LocalFileDeleteFailException.class)
+    public ResponseEntity<Map<String, Object>> handleLocalFileDeleteFail(
+            LocalFileDeleteFailException e
+    ){
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+    }
+
+    @ExceptionHandler(S3UploadFailException.class)
+    public ResponseEntity<Map<String, Object>> handleS3UploadFail(
+            S3UploadFailException e
+    ){
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+    }
+
 
     /**
      * 잘못된 요청 값

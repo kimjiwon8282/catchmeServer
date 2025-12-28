@@ -3,7 +3,7 @@ package com.example.catchme.controller;
 import com.example.catchme.dto.NameUpdateRequest;
 import com.example.catchme.dto.PasswordUpdateRequest;
 import com.example.catchme.model.User;
-import com.example.catchme.service.interfaces.UserService;
+import com.example.catchme.service.interfaces.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

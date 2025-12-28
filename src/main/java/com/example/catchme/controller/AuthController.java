@@ -3,7 +3,7 @@ package com.example.catchme.controller;
 import com.example.catchme.dto.LoginRequest;
 import com.example.catchme.dto.LoginResponse;
 import com.example.catchme.dto.SignupRequest;
-import com.example.catchme.service.interfaces.AuthService;
+import com.example.catchme.service.interfaces.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

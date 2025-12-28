@@ -1,4 +1,4 @@
-package com.example.catchme.service.interfaces;
+package com.example.catchme.service.interfaces.auth;
 
 
 import com.example.catchme.dto.LoginRequest;

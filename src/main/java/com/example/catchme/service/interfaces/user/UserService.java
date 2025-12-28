@@ -1,4 +1,4 @@
-package com.example.catchme.service.interfaces;
+package com.example.catchme.service.interfaces.user;
 
 import com.example.catchme.dto.NameUpdateRequest;
 import com.example.catchme.dto.PasswordUpdateRequest;

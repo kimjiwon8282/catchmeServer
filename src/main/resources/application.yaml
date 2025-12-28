@@ -27,3 +27,9 @@ server:
   jwt:
     issuer: ${JWT_ISSUER}
     secret-key: ${JWT_SECRET_KEY}
+
+aws:
+  s3:
+    bucket: catchme-raw-data-2025-jiwon
+  region: ap-northeast-2
+
