@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RawSensorDataRequest {
 
-    private Long userId;
     private String timestamp;
 
     private int pressure1;

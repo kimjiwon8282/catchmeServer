@@ -2,9 +2,11 @@ package com.example.catchme.controller;
 
 import com.example.catchme.dto.RawDataUploadResponse;
 import com.example.catchme.dto.RawSensorDataRequest;
+import com.example.catchme.model.User;
 import com.example.catchme.service.interfaces.rawData.RawDataService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,8 +21,9 @@ public class RawDataController {
 
     @PostMapping
     public ResponseEntity<RawDataUploadResponse> upload(
+            @AuthenticationPrincipal User user,
             @RequestBody RawSensorDataRequest request
     ) {
-        return ResponseEntity.ok(rawDataService.uploadRawDataAsCsv(request));
+        return ResponseEntity.ok(rawDataService.uploadRawDataAsCsv(user,request));
     }
 }

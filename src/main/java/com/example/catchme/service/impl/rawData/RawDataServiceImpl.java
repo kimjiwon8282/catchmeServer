@@ -27,21 +27,16 @@ import java.time.format.DateTimeFormatter;
 public class RawDataServiceImpl implements RawDataService {
 
     private final FileStorageService fileStorageService;
-    private final UserRepository userRepository;
     private final RawDataFileRepository rawDataFileRepository;
 
     @Override
-    public RawDataUploadResponse uploadRawDataAsCsv(RawSensorDataRequest request) {
-
-        // 1️⃣ 사용자 조회
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+    public RawDataUploadResponse uploadRawDataAsCsv(User user, RawSensorDataRequest request) {
 
         // 2️⃣ CSV 생성
-        Path csvPath = createCsv(request);
+        Path csvPath = createCsv(user, request);
 
         // 3️⃣ S3 object key 생성
-        String objectKey = buildObjectKey(request);
+        String objectKey = buildObjectKey(user);
 
         // 4️⃣ S3 업로드
         String savedKey = fileStorageService.uploadCsv(csvPath, objectKey);
@@ -60,10 +55,10 @@ public class RawDataServiceImpl implements RawDataService {
         return new RawDataUploadResponse(savedKey);
     }
 
-    private Path createCsv(RawSensorDataRequest request) {
+    private Path createCsv(User user, RawSensorDataRequest request) {
         try {
             Path tempFile = Files.createTempFile(
-                    "raw-data-user-" + request.getUserId() + "-",
+                    "raw-data-user-" + user.getId() + "-",
                     ".csv"
             );
 
@@ -88,9 +83,9 @@ public class RawDataServiceImpl implements RawDataService {
         }
     }
 
-    private String buildObjectKey(RawSensorDataRequest request) {
+    private String buildObjectKey(User user) {
         // 예: raw-data/user-1/20251226_193000.csv
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        return "raw-data/user-" + request.getUserId() + "/" + now + ".csv";
+        return "raw-data/user-" + user.getId() + "/" + now + ".csv";
     }
 }
