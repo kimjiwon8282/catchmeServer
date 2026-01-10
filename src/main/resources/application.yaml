@@ -33,3 +33,5 @@ aws:
     bucket: catchme-raw-data-2025-jiwon
   region: ap-northeast-2
 
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY}

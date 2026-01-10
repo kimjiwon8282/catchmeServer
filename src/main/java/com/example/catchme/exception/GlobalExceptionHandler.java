@@ -108,6 +108,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(ExternalApiException.class)
+    public ResponseEntity<Map<String, Object>> handleExternalApi(
+            ExternalApiException e
+    ) {
+        return buildErrorResponse(
+                HttpStatus.BAD_GATEWAY,
+                e.getMessage()
+        );
+    }
+
     /* =========================
        공통 에러 응답 생성 메서드
        ========================= */

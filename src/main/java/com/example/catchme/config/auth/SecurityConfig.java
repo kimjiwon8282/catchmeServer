@@ -65,7 +65,8 @@ public class SecurityConfig {
                         // 인증 없이 접근 허용 (로그인/회원가입 등)
                         .requestMatchers(
                                 "/api/auth/**",
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "/api/hospitals/**"
                         ).permitAll()
 
                         // 그 외 모든 요청은 인증 필요
