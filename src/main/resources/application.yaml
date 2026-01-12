@@ -35,3 +35,7 @@ aws:
 
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
+
+ai:
+  fastapi:
+    url: ${FASTAPI_URL}

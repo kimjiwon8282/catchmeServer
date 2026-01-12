@@ -1,7 +1,9 @@
 package com.example.catchme.config.init;
 
+import com.example.catchme.model.RawDataFile;
 import com.example.catchme.model.Role;
 import com.example.catchme.model.User;
+import com.example.catchme.repository.RawDataFileRepository;
 import com.example.catchme.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,8 @@ public class TestDataInitializer {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RawDataFileRepository rawDataFileRepository;
+
 
     @PostConstruct
     public void init() {
@@ -35,7 +39,14 @@ public class TestDataInitializer {
                 .role(Role.GUARDIAN)
                 .build();
 
+        RawDataFile rawDataFile = RawDataFile.create(
+                user,
+                "s3://test-bucket/raw-data/test-user/sample.csv"
+        );
         userRepository.save(user);
         userRepository.save(user2);
+        rawDataFileRepository.save(rawDataFile);
+
+
     }
 }
