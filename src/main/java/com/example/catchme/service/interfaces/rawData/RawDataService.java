@@ -5,7 +5,8 @@ import com.example.catchme.dto.RawSensorDataRequest;
 import com.example.catchme.model.User;
 
 import java.nio.file.Path;
+import java.util.List;
 
 public interface RawDataService {
-    RawDataUploadResponse uploadRawDataAsCsv(User user, RawSensorDataRequest request);
+    RawDataUploadResponse uploadRawDataAsCsv(User user, List<RawSensorDataRequest> requests);
 }

@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/raw-data")
 @RequiredArgsConstructor
@@ -22,8 +24,8 @@ public class RawDataController {
     @PostMapping
     public ResponseEntity<RawDataUploadResponse> upload(
             @AuthenticationPrincipal User user,
-            @RequestBody RawSensorDataRequest request
+            @RequestBody List<RawSensorDataRequest> requests
     ) {
-        return ResponseEntity.ok(rawDataService.uploadRawDataAsCsv(user,request));
+        return ResponseEntity.ok(rawDataService.uploadRawDataAsCsv(user,requests));
     }
 }

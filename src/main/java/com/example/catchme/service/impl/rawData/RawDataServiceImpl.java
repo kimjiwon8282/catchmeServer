@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,10 +31,10 @@ public class RawDataServiceImpl implements RawDataService {
     private final RawDataFileRepository rawDataFileRepository;
 
     @Override
-    public RawDataUploadResponse uploadRawDataAsCsv(User user, RawSensorDataRequest request) {
+    public RawDataUploadResponse uploadRawDataAsCsv(User user, List<RawSensorDataRequest> requests) {
 
         // 2️⃣ CSV 생성
-        Path csvPath = createCsv(user, request);
+        Path csvPath = createCsv(user, requests);
 
         // 3️⃣ S3 object key 생성
         String objectKey = buildObjectKey(user);
@@ -55,7 +56,7 @@ public class RawDataServiceImpl implements RawDataService {
         return new RawDataUploadResponse(savedKey);
     }
 
-    private Path createCsv(User user, RawSensorDataRequest request) {
+    private Path createCsv(User user, List<RawSensorDataRequest> requests) {
         try {
             Path tempFile = Files.createTempFile(
                     "raw-data-user-" + user.getId() + "-",
@@ -63,18 +64,22 @@ public class RawDataServiceImpl implements RawDataService {
             );
 
             try (FileWriter writer = new FileWriter(tempFile.toFile())) {
+                //헤더 작성
                 writer.write("timestamp,p1,p2,p3,p4,acc_x,acc_y,acc_z\n");
-                writer.write(String.format(
-                        "%s,%d,%d,%d,%d,%.3f,%.3f,%.3f\n",
-                        request.getTimestamp(),
-                        request.getPressure1(),
-                        request.getPressure2(),
-                        request.getPressure3(),
-                        request.getPressure4(),
-                        request.getAccX(),
-                        request.getAccY(),
-                        request.getAccZ()
-                ));
+                //데이터 반복 작성
+                for (RawSensorDataRequest data : requests) {
+                    writer.write(String.format(
+                            "%s,%d,%d,%d,%d,%.3f,%.3f,%.3f\n",
+                            data.getTimestamp(),
+                            data.getPressure1(),
+                            data.getPressure2(),
+                            data.getPressure3(),
+                            data.getPressure4(),
+                            data.getAccX(),
+                            data.getAccY(),
+                            data.getAccZ()
+                    ));
+                }
             }
             return tempFile;
 
