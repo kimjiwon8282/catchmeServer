@@ -57,7 +57,8 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
     }
 
-    @Transactional(readOnly = true)
+    // ⚠️ 중요: 데이터를 수정(FCM 토큰 저장)해야 하므로 readOnly = true를 빼야 합니다!
+    @Transactional
     @Override
     public LoginResponse login(LoginRequest request) {
 
@@ -72,11 +73,17 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidLoginException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        // 3️⃣ Access Token 생성 (⭐ TokenProvider 기준)
+        // 3️⃣ [추가된 로직] FCM 토큰 업데이트
+        // 앱에서 토큰을 보내줬을 때만 업데이트 (혹시나 null일 수도 있으니 체크)
+        if (request.getFcmToken() != null && !request.getFcmToken().isBlank()) {
+            user.updateFcmToken(request.getFcmToken());
+        }
+
+        // 4️⃣ Access Token 생성 (⭐ TokenProvider 기준)
         String accessToken =
                 tokenProvider.generateToken(user, ACCESS_TOKEN_DURATION);
 
-        // 4️⃣ JSON 응답
+        // 5️⃣ JSON 응답
         return new LoginResponse(accessToken,user.getRole().name());
     }
 }

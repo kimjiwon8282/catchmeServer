@@ -53,6 +53,9 @@ dependencies {
 	// 6. AWS S3
 	implementation platform("software.amazon.awssdk:bom:2.25.65")
 	implementation "software.amazon.awssdk:s3"
+
+	// 7. FCM (Firebase Cloud Messaging)
+	implementation 'com.google.firebase:firebase-admin:9.2.0'
 }
 
 tasks.named('test') {

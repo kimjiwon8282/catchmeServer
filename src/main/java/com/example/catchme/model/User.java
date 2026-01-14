@@ -44,6 +44,10 @@ public class User implements UserDetails {
     @JoinColumn(name = "linked_user_id")
     private User linkedUser;
 
+    /** FCM 토큰 (모바일 기기 식별용) - 알림 발송 시 필요 */
+    @Column(length = 500) // 토큰 길이가 꽤 길어서 넉넉하게 잡는 게 좋습니다.
+    private String fcmToken;
+
     @Builder
     public User(String email, String password, String name, Role role) {
         this.email = email;
@@ -101,4 +105,7 @@ public class User implements UserDetails {
     }
 
     public void setLinkedUser(User user) {this.linkedUser = user;}
+
+    // 토큰 업데이트 메서드 (로그인 시 호출 예정)
+    public void updateFcmToken(String token) {this.fcmToken = token;}
 }

@@ -39,14 +39,20 @@ public class TestDataInitializer {
                 .role(Role.GUARDIAN)
                 .build();
 
+
+        userRepository.save(user);
+        userRepository.save(user2);
+
+        user.setLinkedUser(user2);
+        user2.setLinkedUser(user);
+        user2.updateFcmToken("test_fcm_token_12345_guardian");
+        userRepository.save(user);
+        userRepository.save(user2);
+
         RawDataFile rawDataFile = RawDataFile.create(
                 user,
                 "s3://test-bucket/raw-data/test-user/sample.csv"
         );
-        userRepository.save(user);
-        userRepository.save(user2);
         rawDataFileRepository.save(rawDataFile);
-
-
     }
 }
