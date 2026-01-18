@@ -11,6 +11,10 @@ import com.example.catchme.model.User;
 import com.example.catchme.repository.UserRepository;
 import com.example.catchme.service.interfaces.auth.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
     private static final Duration ACCESS_TOKEN_DURATION = Duration.ofHours(1);
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     @Override
@@ -62,28 +67,38 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse login(LoginRequest request) {
 
-        // 1️⃣ 이메일 기준 사용자 조회
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() ->
-                        new InvalidLoginException("이메일 또는 비밀번호가 올바르지 않습니다.")
-                );
+        Authentication authentication;
 
-        // 2️⃣ 비밀번호 검증
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            // ❗ 사용자 존재 여부 / 탈퇴 여부 / 비밀번호 오류
+            // 전부 동일한 로그인 실패로 처리
             throw new InvalidLoginException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        // 3️⃣ [추가된 로직] FCM 토큰 업데이트
-        // 앱에서 토큰을 보내줬을 때만 업데이트 (혹시나 null일 수도 있으니 체크)
+        // 여기까지 왔다는 건:
+        // - UserDetailsService 호출됨
+        // - withdrawn = false
+        // - 비밀번호 일치
+        // - isEnabled() 통과
+
+        User user = (User) authentication.getPrincipal();
+
+        // ✅ FCM 토큰 업데이트 (비즈니스 로직은 여전히 여기서)
         if (request.getFcmToken() != null && !request.getFcmToken().isBlank()) {
-            user.updateFcmToken(request.getFcmToken());
+            user.updateFcmToken(request.getFcmToken()); //dirty checking
         }
 
-        // 4️⃣ Access Token 생성 (⭐ TokenProvider 기준)
+        // ✅ JWT 발급
         String accessToken =
                 tokenProvider.generateToken(user, ACCESS_TOKEN_DURATION);
 
-        // 5️⃣ JSON 응답
-        return new LoginResponse(accessToken,user.getRole().name());
+        return new LoginResponse(accessToken, user.getRole().name());
     }
 }

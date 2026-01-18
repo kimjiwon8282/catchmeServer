@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -48,12 +49,18 @@ public class User implements UserDetails {
     @Column(length = 500) // 토큰 길이가 꽤 길어서 넉넉하게 잡는 게 좋습니다.
     private String fcmToken;
 
+    @Column(nullable = false)
+    private boolean withdrawn;      // 탈퇴 여부
+
+    private LocalDateTime withdrawnAt; // 탈퇴 시각
+
     @Builder
     public User(String email, String password, String name, Role role) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.role = role;
+        this.withdrawn = false;
     }
 
     /* =========================
@@ -89,7 +96,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true; // 활성화 여부 미구현
+        return !withdrawn;
     }
 
     /* =========================
@@ -108,4 +115,10 @@ public class User implements UserDetails {
 
     // 토큰 업데이트 메서드 (로그인 시 호출 예정)
     public void updateFcmToken(String token) {this.fcmToken = token;}
+
+    public void withdraw() {
+        this.withdrawn = true;
+        this.withdrawnAt = LocalDateTime.now();
+        this.fcmToken = null; // 알림 대상에서 제거
+    }
 }
