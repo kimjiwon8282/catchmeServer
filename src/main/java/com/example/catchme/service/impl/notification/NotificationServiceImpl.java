@@ -1,6 +1,10 @@
 package com.example.catchme.service.impl.notification;
 
+import com.example.catchme.exception.exceptions.ExternalApiException;
 import com.example.catchme.service.interfaces.notification.NotificationService;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -11,18 +15,35 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-    @Async("taskExecutor") // ✅ 이 메서드는 이제 별도의 스레드에서 돌아갑니다! (DB 트랜잭션과 무관해짐)
+    @Async("taskExecutor")
     @Override
     public void sendRiskAlert(String fcmToken, String patientName) {
 
-        // 1. 토큰 검증
         if (fcmToken == null || fcmToken.isBlank()) {
-            log.warn("🚨 알림 발송 실패: FCM 토큰이 없습니다.");
+            log.warn("⚠️ FCM 토큰 없음 → 알림 생략");
             return;
         }
 
-        // 2. (내일 구현) Firebase 발송 로직
-        // 여기서 3초가 걸리든 10초가 걸리든, 메인 서버에는 아무 영향이 없음
-        log.info("🚀 [비동기 발송] To: {}, Body: 환자 {}님의 위험 감지!", fcmToken, patientName);
+        try {
+            Message message = Message.builder()
+                    .setToken(fcmToken)
+                    .setNotification(
+                            Notification.builder()
+                                    .setTitle("위험 감지")
+                                    .setBody(patientName + "님의 이상 징후가 감지되었습니다.")
+                                    .build()
+                    )
+                    .build();
+
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.info("✅ FCM 발송 성공 messageId={}", response);
+
+        } catch (Exception e) {
+            // 🔥 개발자/운영자용 로그
+            log.error("❌ FCM 전송 실패 (token={})", fcmToken, e);
+
+            // 🔥 사용자/클라이언트용 예외
+            throw new ExternalApiException("알림 전송에 실패했습니다.");
+        }
     }
 }
