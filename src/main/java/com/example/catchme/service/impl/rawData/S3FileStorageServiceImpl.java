@@ -3,16 +3,19 @@ package com.example.catchme.service.impl.rawData;
 import com.example.catchme.exception.exceptions.S3UploadFailException;
 import com.example.catchme.service.interfaces.rawData.FileStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.nio.file.Path;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class S3FileStorageServiceImpl implements FileStorageService {
 
     private final S3Client s3Client;
@@ -34,6 +37,20 @@ public class S3FileStorageServiceImpl implements FileStorageService {
 
         } catch (Exception e) {
             throw new S3UploadFailException("S3 업로드에 실패했습니다.");
+        }
+    }
+
+    @Override
+    public void deleteIfExists(String objectKey) {
+        try {
+            s3Client.deleteObject(
+                    DeleteObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(objectKey)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.info("s3파일 삭제에 실패했습니다.");
         }
     }
 }

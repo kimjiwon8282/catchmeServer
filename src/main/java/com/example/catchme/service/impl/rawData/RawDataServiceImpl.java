@@ -10,6 +10,7 @@ import com.example.catchme.model.User;
 import com.example.catchme.repository.RawDataFileRepository;
 import com.example.catchme.repository.UserRepository;
 import com.example.catchme.service.interfaces.rawData.FileStorageService;
+import com.example.catchme.service.interfaces.rawData.RawDataMetadataService;
 import com.example.catchme.service.interfaces.rawData.RawDataService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,36 +25,54 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class RawDataServiceImpl implements RawDataService {
 
     private final FileStorageService fileStorageService;
-    private final RawDataFileRepository rawDataFileRepository;
+    private final RawDataMetadataService rawDataMetadataService;
 
     @Override
     public RawDataUploadResponse uploadRawDataAsCsv(User user, List<RawSensorDataRequest> requests) {
-
-        // 2️⃣ CSV 생성
-        Path csvPath = createCsv(user, requests);
-
-        // 3️⃣ S3 object key 생성
-        String objectKey = buildObjectKey(user);
-
-        // 4️⃣ S3 업로드
-        String savedKey = fileStorageService.uploadCsv(csvPath, objectKey);
-
-        // 5️⃣ 메타데이터 DB 저장
-        RawDataFile rawDataFile = RawDataFile.create(user, savedKey);
-        rawDataFileRepository.save(rawDataFile);
-
-        // 6️⃣ 로컬 CSV 삭제
+        Path csvPath = null;
+        String objectKey = null;
         try {
-            Files.deleteIfExists(csvPath);
-        } catch (Exception e) {
-            throw new LocalFileDeleteFailException("업로드 후 로컬 CSV 삭제에 실패했습니다.");
-        }
+            /* ==========================
+               1️⃣ CSV 생성 (로컬)
+               ========================== */
+            csvPath = createCsv(user, requests);
 
-        return new RawDataUploadResponse(savedKey);
+            /* ==========================
+               2️⃣ S3 object key 생성
+               ========================== */
+            objectKey = buildObjectKey(user);
+
+            /* ==========================
+               3️⃣ S3 업로드 (선행)
+               ========================== */
+            fileStorageService.uploadCsv(csvPath, objectKey);
+
+            // ✅ 프록시를 통한 호출 → 트랜잭션 적용
+            rawDataMetadataService.save(user, objectKey);
+
+            return new RawDataUploadResponse(objectKey);
+
+        } catch (Exception e) {
+
+            /* ==========================
+               5️⃣ 보상 트랜잭션 (S3 롤백)
+               ========================== */
+            if (objectKey != null) {
+                fileStorageService.deleteIfExists(objectKey);
+            }
+
+            throw e;
+
+        } finally {
+
+            /* ==========================
+               6️⃣ 로컬 CSV 삭제
+               ========================== */
+            deleteLocalFile(csvPath);
+        }
     }
 
     private Path createCsv(User user, List<RawSensorDataRequest> requests) {
@@ -92,5 +111,20 @@ public class RawDataServiceImpl implements RawDataService {
         // 예: raw-data/user-1/20251226_193000.csv
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         return "raw-data/user-" + user.getId() + "/" + now + ".csv";
+    }
+
+    /* ==========================
+       로컬 파일 삭제
+       ========================== */
+    private void deleteLocalFile(Path csvPath) {
+        if (csvPath == null) return;
+
+        try {
+            Files.deleteIfExists(csvPath);
+        } catch (Exception e) {
+            throw new LocalFileDeleteFailException(
+                    "업로드 후 로컬 CSV 삭제에 실패했습니다."
+            );
+        }
     }
 }

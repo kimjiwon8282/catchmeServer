@@ -90,7 +90,7 @@ public class SecurityConfig {
                 );
 
         /* =====================================================
-           H2 콘솔 사용을 위한 설정 (개발용)
+           H2 콘솔 사용을 위한 설정 (개발용) , 운영환경에서는 제거하기
            ===================================================== */
         http.headers(headers ->
                 headers.frameOptions(frame -> frame.disable())
