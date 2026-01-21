@@ -29,10 +29,6 @@ public class LinkServiceImpl implements LinkService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
-        if (user.getRole() != Role.USER) {
-            throw new IllegalStateException("환자만 QR을 생성할 수 있습니다.");
-        }
-
         if (user.getLinkedUser() != null) {
             throw new IllegalStateException("이미 보호자와 연동된 계정입니다.");
         }
@@ -60,11 +56,6 @@ public class LinkServiceImpl implements LinkService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("환자를 찾을 수 없습니다."));
-
-        // Role 검증
-        if (guardian.getRole() != Role.GUARDIAN) {
-            throw new IllegalStateException("보호자만 연동할 수 있습니다.");
-        }
 
         if (user.getRole() != Role.USER) {
             throw new IllegalStateException("QR 대상이 환자가 아닙니다.");

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Duration;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 /**
  * JWT 토큰의 생성 / 검증 / 인증 객체 변환을 담당하는 클래스
@@ -59,7 +61,10 @@ public class TokenProvider {
     public String generateToken(User user, Duration duration) {
         Date now = new Date(); // 토큰 발급 시각
         Date expiry = new Date(now.getTime() + duration.toMillis()); // 만료 시각
-
+        // User 엔티티의 getAuthorities()를 사용하여 "ROLE_" 접두사가 붙은 권한을 가져옵니다.
+        String authorities = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
         return Jwts.builder()
                 // [Header] JWT 타입 명시
                 .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
@@ -73,7 +78,7 @@ public class TokenProvider {
                 // [Payload - 커스텀 클레임]
                 // → DB 조회 시 사용할 수 있도록 사용자 id 포함
                 .claim("id", user.getId())
-
+                .claim("auth", authorities)
                 // [Signature]
                 // 문자열 secretKey를 그대로 쓰지 않고,
                 // 암호학적으로 안전한 Key 객체로 변환하여 사용

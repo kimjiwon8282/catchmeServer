@@ -9,6 +9,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -18,41 +19,63 @@ public class TestDataInitializer {
     private final PasswordEncoder passwordEncoder;
     private final RawDataFileRepository rawDataFileRepository;
 
-
     @PostConstruct
+    @Transactional
     public void init() {
-        if (userRepository.findByEmail("test@test.com").isPresent()) {
-            return; // 이미 있으면 생성 안 함
+        // 중복 초기화 방지
+        if (userRepository.findByEmail("patient@test.com").isPresent()) {
+            return;
         }
 
-        User user = User.builder()
-                .email("test@test.com")
+        // 1. 환자 유저 생성 (Role: USER) - 연동 안 된 상태
+        User patient = User.builder()
+                .email("patient@test.com") // 명확하게 구분하기 위해 이메일 변경
                 .password(passwordEncoder.encode("1234"))
-                .name("테스트 유저")
+                .name("테스트 환자")
                 .role(Role.USER)
                 .build();
 
-        User user2 = User.builder()
-                .email("test1@test.com")
+        // 2. 보호자 유저 생성 (Role: GUARDIAN) - 연동 안 된 상태
+        User guardian = User.builder()
+                .email("guardian@test.com") // 명확하게 구분하기 위해 이메일 변경
                 .password(passwordEncoder.encode("1234"))
-                .name("보호자 유저")
+                .name("테스트 보호자")
                 .role(Role.GUARDIAN)
                 .build();
 
+        userRepository.save(patient);
+        userRepository.save(guardian);
 
-        userRepository.save(user);
-        userRepository.save(user2);
+        // 3. (옵션) 이미 연동된 커플이 필요하다면 별도로 생성 (QR 테스트 외 다른 기능 테스트용)
+        // createLinkedCouple();
 
-        user.setLinkedUser(user2);
-        user2.setLinkedUser(user);
-        user2.updateFcmToken("test_fcm_token_12345_guardian");
-        userRepository.save(user);
-        userRepository.save(user2);
-
+        // 4. 데이터 파일 생성 (환자 데이터)
+        // 주의: 환자가 아직 보호자와 연동되지 않았어도 데이터는 쌓일 수 있으므로 생성해둡니다.
         RawDataFile rawDataFile = RawDataFile.create(
-                user,
+                patient,
                 "s3://test-bucket/raw-data/test-user/sample.csv"
         );
         rawDataFileRepository.save(rawDataFile);
     }
+
+    // 필요 시 주석을 풀어서 사용하세요 (이미 연동된 상태 테스트용)
+    /*
+    private void createLinkedCouple() {
+        User linkedPatient = User.builder()
+                .email("linked_p@test.com").password(passwordEncoder.encode("1234"))
+                .name("연동된 환자").role(Role.USER).build();
+        User linkedGuardian = User.builder()
+                .email("linked_g@test.com").password(passwordEncoder.encode("1234"))
+                .name("연동된 보호자").role(Role.GUARDIAN).build();
+
+        userRepository.save(linkedPatient);
+        userRepository.save(linkedGuardian);
+
+        linkedPatient.setLinkedUser(linkedGuardian);
+        linkedGuardian.setLinkedUser(linkedPatient);
+
+        userRepository.save(linkedPatient);
+        userRepository.save(linkedGuardian);
+    }
+    */
 }

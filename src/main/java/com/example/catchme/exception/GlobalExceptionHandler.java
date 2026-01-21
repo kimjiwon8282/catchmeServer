@@ -3,6 +3,8 @@ package com.example.catchme.exception;
 import com.example.catchme.exception.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -116,6 +118,17 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_GATEWAY,
                 e.getMessage()
         );
+    }
+
+    /**
+     * @RequestBody가 없거나 JSON 형식이 잘못되었을 때
+     * → 400 Bad Request
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonParseError(
+            HttpMessageNotReadableException e
+    ) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "요청 본문(Body)이 비어있거나 형식이 올바르지 않습니다.");
     }
 
     /* =========================

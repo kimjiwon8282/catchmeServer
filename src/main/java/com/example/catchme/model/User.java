@@ -70,8 +70,7 @@ public class User implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // JWT + Stateless 구조에서는 단순 권한만 있어도 충분
-        return List.of(new SimpleGrantedAuthority(role.name()));
-    }
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));    }
 
     @Override
     public String getUsername() {

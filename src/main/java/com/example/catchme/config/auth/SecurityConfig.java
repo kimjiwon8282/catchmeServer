@@ -77,6 +77,9 @@ public class SecurityConfig {
                                 "/h2-console/**"
                         ).permitAll()
 
+                        .requestMatchers("/api/link/qr").hasRole("USER")           // 환자만 가능
+                        .requestMatchers("/api/link/connect").hasRole("GUARDIAN")  // 보호자만 가능
+
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )

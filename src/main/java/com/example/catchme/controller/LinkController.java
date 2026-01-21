@@ -6,6 +6,7 @@ import com.example.catchme.model.User;
 import com.example.catchme.service.interfaces.user.LinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
