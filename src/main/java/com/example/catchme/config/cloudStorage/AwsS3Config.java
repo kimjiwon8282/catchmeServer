@@ -1,4 +1,4 @@
-package com.example.catchme.config.aws;
+package com.example.catchme.config.cloudStorage;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
