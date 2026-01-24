@@ -56,6 +56,16 @@ dependencies {
 
 	// 7. FCM (Firebase Cloud Messaging)
 	implementation 'com.google.firebase:firebase-admin:9.2.0'
+
+	// 7. Resilience4j (Spring Boot 3 전용)
+	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+
+	// 8. AOP (어노테이션 동작을 위해 필수)
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+	// 9. 로컬 캐싱 (Caffeine)
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
 }
 
 tasks.named('test') {

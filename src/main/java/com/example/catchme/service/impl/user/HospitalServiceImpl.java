@@ -1,81 +1,86 @@
 package com.example.catchme.service.impl.user;
+import com.example.catchme.config.externalApi.KakaoApiClient;
 import com.example.catchme.dto.HospitalResponse;
 import com.example.catchme.exception.exceptions.ExternalApiException;
 import com.example.catchme.service.interfaces.user.HospitalService;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.web.util.UriComponentsBuilder;
-import java.net.URI;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class HospitalServiceImpl implements HospitalService {
 
-    @Value("${kakao.rest-api-key}")
-    private String kakaoApiKey;
-
-    private final RestTemplate restTemplate; // Bean 주입 (Timeout 설정됨)
+    private final KakaoApiClient kakaoApiClient; // 인터페이스 주입
 
     @Override
+    // name: yaml에서 설정한 인스턴스 이름 ("kakaoApi")
+    // fallbackMethod: 에러 발생 시 대신 실행할 메서드 이름
+    @CircuitBreaker(name = "kakaoApi", fallbackMethod = "fallbackNearbyHospitals")
+    // value: CacheConfig에서 만든 저장소 이름 ("hospitals")
+    // key: 위도/경도에 1000을 곱해서 반올림 -> 문자열로 조합
+    @Cacheable(value = "hospitals", key = "T(java.lang.Math).round(#lat * 1000) + '_' + T(java.lang.Math).round(#lng * 1000)")
     public List<HospitalResponse> findNearbyHospitals(double lat, double lng) {
+        // [중요] 캐시가 적중(Hit)하면, 이 메서드는 아예 실행되지 않습니다.
+        log.info("🚀 [Service] 카카오 API 호출 시도 (lat: {}, lng: {})", lat, lng);
         try {
-            // [수정 후] URI 객체로 받음 (해결책!)
-            URI uri = UriComponentsBuilder
-                    .fromUriString("https://dapi.kakao.com/v2/local/search/keyword.json")
-                    .queryParam("query", "신경과")
-                    .queryParam("x", lng)
-                    .queryParam("y", lat)
-                    .queryParam("radius", 3000)
-                    .queryParam("sort", "distance")
-                    .encode() // 한글 인코딩 처리
-                    .build()
-                    .toUri(); // String이 아니라 URI 객체로 반환
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "KakaoAK " + kakaoApiKey);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    uri, // 🔥 여기에 String 대신 uri 객체를 넣습니다.
-                    HttpMethod.GET,
-                    entity,
-                    Map.class
+            Map<String, Object> response = kakaoApiClient.searchKeyword(
+                    "신경과",
+                    lng,
+                    lat,
+                    3000,
+                    "distance"
             );
 
             // 1. Body Null 체크
-            Map<String, Object> body = response.getBody();
-            if (body == null || !body.containsKey("documents")) {
+            if (response == null || !response.containsKey("documents")) {
                 return List.of();
             }
 
-            List<Map<String, Object>> documents = (List<Map<String, Object>>) body.get("documents");
+            List<Map<String, Object>> documents = (List<Map<String, Object>>) response.get("documents");
 
             return documents.stream()
                     .map(doc -> new HospitalResponse(
                             String.valueOf(doc.get("place_name")),
                             String.valueOf(doc.get("category_name")),
                             String.valueOf(doc.get("address_name")),
-                            // 2. 안전한 파싱 (String.valueOf 사용)
                             Double.parseDouble(String.valueOf(doc.get("y"))),
                             Double.parseDouble(String.valueOf(doc.get("x"))),
                             Integer.parseInt(String.valueOf(doc.get("distance")))
                     ))
                     .toList();
 
-        } catch (RestClientException e) {
+        } catch (Exception e) {
+            // RestClient는 에러 발생 시 HttpClientErrorException 등을 던집니다.
+            log.error("⚠️ [Service] API 호출 실패! 에러를 던져서 서킷 브레이커에게 알립니다. 원인: {}", e.getMessage());
             throw new ExternalApiException("카카오 맵 API 호출 중 오류가 발생했습니다.", e);
-        } catch (NumberFormatException e) {
-            // 데이터 파싱 중 오류 발생 시 처리 (로그 남기기 등)
-            throw new ExternalApiException("병원 데이터 처리 중 오류가 발생했습니다.", e);
         }
     }
+
+    /**
+     * 🔥 Fallback 메서드 (장애 발생 시 실행)
+     * 규칙 1: 리턴 타입이 원본 메서드와 같아야 함.
+     * 규칙 2: 파라미터가 원본과 같고, 마지막에 Throwable을 받아야 함.
+     */
+    public List<HospitalResponse> fallbackNearbyHospitals(double lat, double lng, Throwable t) {
+        // [로그 4] 상황별 Fallback 로그 (차단됨 vs 그냥 에러남)
+        if (t instanceof CallNotPermittedException) {
+            log.error("[Circuit Breaker OPEN] 서킷이 열려있습니다! API 호출을 아예 차단하고 즉시 Fallback을 실행합니다.");
+        } else {
+            log.error("[Circuit Breaker Catch] API 호출 중 에러 감지! Fallback 실행. 원인: {}", t.getMessage());
+        }
+        // 장애 시 빈 리스트 반환 (클라이언트는 에러 화면 대신 '결과 없음'을 보게 됨)
+        // 상황에 따라 "일시적 장애로 조회 불가" 같은 더미 데이터를 줄 수도 있음
+        return Collections.emptyList();
+    }
+
+
 }

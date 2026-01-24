@@ -1,12 +1,11 @@
 package com.example.catchme.controller;
 
 import com.example.catchme.dto.HospitalResponse;
+import com.example.catchme.dto.LocationRequest;
 import com.example.catchme.service.interfaces.user.HospitalService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -22,9 +21,9 @@ public class HospitalController {
      */
     @GetMapping("/nearby")
     public List<HospitalResponse> getNearbyHospitals(
-            @RequestParam double lat,
-            @RequestParam double lng
+            @Valid @ModelAttribute LocationRequest request // DTO로 변경 및 검증 적용
     ) {
-        return hospitalService.findNearbyHospitals(lat, lng);
+        // 서비스에는 풀어서 전달하거나 DTO째로 전달 (여기선 풀어서 전달)
+        return hospitalService.findNearbyHospitals(request.getLat(), request.getLng());
     }
 }

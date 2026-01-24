@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -129,6 +130,20 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException e
     ) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "요청 본문(Body)이 비어있거나 형식이 올바르지 않습니다.");
+    }
+
+    /**
+     * @Valid 검증 실패 시 (@ModelAttribute)
+     * → 400 Bad Request 및 에러 메시지 반환
+     */
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<Map<String, Object>> handleBindException(BindException e) {
+        String errorMessage = e.getBindingResult()
+                .getAllErrors()
+                .get(0) // 첫 번째 에러 메시지만 보여줌
+                .getDefaultMessage();
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
     }
 
     /* =========================
