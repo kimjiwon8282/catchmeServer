@@ -77,8 +77,22 @@ public class SecurityConfig {
                                 "/h2-console/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/link/qr").hasRole("USER")           // 환자만 가능
-                        .requestMatchers("/api/link/connect").hasRole("GUARDIAN")  // 보호자만 가능
+                        // 2. [환자/USER 전용]
+                        // - QR 생성
+                        // - 내 분석 이력 조회
+                        // - 분석 요청 (데이터 업로드는 환자가 하니까)
+                        .requestMatchers(
+                                "/api/link/qr",
+                                "/api/predictions/history/me",
+                                "/api/predictions/latest"
+                        ).hasRole("USER")
+                        // 3. [보호자/GUARDIAN 전용]
+                        // - 환자 연결하기
+                        // - 연결된 환자의 이력 조회
+                        .requestMatchers(
+                                "/api/link/connect",
+                                "/api/predictions/history/patient"
+                        ).hasRole("GUARDIAN")
 
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
