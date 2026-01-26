@@ -4,9 +4,11 @@ import com.example.catchme.config.externalApi.AiPredictionClient;
 import com.example.catchme.dto.AiPredictionRequest;
 import com.example.catchme.dto.AiPredictionResponse;
 import com.example.catchme.exception.exceptions.ExternalApiException;
+import com.example.catchme.exception.exceptions.UserNotFoundException;
 import com.example.catchme.model.RawDataFile;
 import com.example.catchme.model.User;
 import com.example.catchme.repository.RawDataFileRepository;
+import com.example.catchme.repository.UserRepository;
 import com.example.catchme.service.interfaces.ai.PredictionService;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
@@ -26,11 +28,16 @@ public class PredictionServiceImpl implements PredictionService {
     private final RawDataFileRepository rawDataFileRepository;
     private final AiPredictionClient aiPredictionClient;
     private final PredictionResultService predictionResultService;
+    private final UserRepository userRepository;
 
     @Override
     @CircuitBreaker(name = "aiPrediction", fallbackMethod = "fallbackPrediction")
     @Bulkhead(name = "aiPrediction", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "fallbackPrediction")
-    public AiPredictionResponse requestLatestPrediction(User user) {
+    public AiPredictionResponse requestLatestPrediction(Long userId) {
+
+        // 1. 유저 조회 (영속화 & 검증)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
         //조회
         RawDataFile rawDataFile = rawDataFileRepository
                 .findTopByUserOrderByCreatedAtDesc(user)

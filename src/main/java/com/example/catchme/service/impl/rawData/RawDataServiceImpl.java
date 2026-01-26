@@ -29,9 +29,14 @@ public class RawDataServiceImpl implements RawDataService {
 
     private final FileStorageService fileStorageService;
     private final RawDataMetadataService rawDataMetadataService;
+    private final UserRepository userRepository;
 
     @Override
-    public RawDataUploadResponse uploadRawDataAsCsv(User user, List<RawSensorDataRequest> requests) {
+    @Transactional
+    public RawDataUploadResponse uploadRawDataAsCsv(Long userId, List<RawSensorDataRequest> requests) {
+        // 1. [진입점] ID로 최신 유저 정보 조회 (영속화)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
         Path csvPath = null;
         String objectKey = null;
         try {

@@ -3,8 +3,8 @@ package com.example.catchme.controller;
 import com.example.catchme.dto.AiPredictionResponse;
 import com.example.catchme.dto.PredictionHistoryResponse;
 import com.example.catchme.model.User;
-import com.example.catchme.service.impl.user.PredictionReadService;
 import com.example.catchme.service.interfaces.ai.PredictionService;
+import com.example.catchme.service.interfaces.user.PredictionReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,7 +30,7 @@ public class PredictionController {
             @AuthenticationPrincipal User user
     ) {
         return ResponseEntity.ok(
-                predictionService.requestLatestPrediction(user)
+                predictionService.requestLatestPrediction(user.getId())
         );
     }
 
@@ -40,7 +40,7 @@ public class PredictionController {
             @AuthenticationPrincipal User user,
             @PageableDefault(size = 10, sort = "analyzedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(predictionReadService.getMyHistory(user, pageable));
+        return ResponseEntity.ok(predictionReadService.getMyHistory(user.getId(), pageable));
     }
     // 보호자가 환자 기록 조회
     @GetMapping("/history/patient")
@@ -48,6 +48,6 @@ public class PredictionController {
             @AuthenticationPrincipal User user,
             @PageableDefault(size = 10, sort = "analyzedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(predictionReadService.getPatientHistory(user, pageable));
+        return ResponseEntity.ok(predictionReadService.getPatientHistory(user.getId(), pageable));
     }
 }

@@ -4,5 +4,5 @@ import com.example.catchme.dto.AiPredictionResponse;
 import com.example.catchme.model.User;
 
 public interface PredictionService {
-        AiPredictionResponse requestLatestPrediction(User user);
+        AiPredictionResponse requestLatestPrediction(Long userId);
 }

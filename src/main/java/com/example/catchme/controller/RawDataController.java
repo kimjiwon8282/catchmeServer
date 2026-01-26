@@ -26,6 +26,6 @@ public class RawDataController {
             @AuthenticationPrincipal User user,
             @RequestBody List<RawSensorDataRequest> requests
     ) {
-        return ResponseEntity.ok(rawDataService.uploadRawDataAsCsv(user,requests));
+        return ResponseEntity.ok(rawDataService.uploadRawDataAsCsv(user.getId(), requests));
     }
 }

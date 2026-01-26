@@ -5,6 +5,7 @@ import com.example.catchme.exception.exceptions.UserNotFoundException;
 import com.example.catchme.model.User;
 import com.example.catchme.repository.AiPredictionResultRepository;
 import com.example.catchme.repository.UserRepository;
+import com.example.catchme.service.interfaces.user.PredictionReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,23 +15,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class PredictionReadService {
+public class PredictionReadServiceImpl implements PredictionReadService {
     private final AiPredictionResultRepository aiPredictionResultRepository;
     private final UserRepository userRepository;
-
     /**
      * [환자용] 본인의 기록 조회
      * - 이미 로그인 필터에서 탈퇴한 회원은 걸러지므로 별도 체크 불필요
      */
-    public Page<PredictionHistoryResponse> getMyHistory(User user, Pageable pageable) {
-        return aiPredictionResultRepository.findAllByUserId(user.getId(), pageable)
+    @Override
+    public Page<PredictionHistoryResponse> getMyHistory(Long userId, Pageable pageable) {
+        return aiPredictionResultRepository.findAllByUserId(userId, pageable)
                 .map(PredictionHistoryResponse::from);
     }
     /**
      * [보호자용] 연결된 환자의 기록 조회
      * - 환자가 탈퇴했는지 체크 필수!
      */
-    public Page<PredictionHistoryResponse> getPatientHistory(User guardian, Pageable pageable) {
+    @Override
+    public Page<PredictionHistoryResponse> getPatientHistory(Long guardianId, Pageable pageable) {
+        // 1. 내 트랜잭션 안으로 불러오기 (영속화)
+        User guardian = userRepository.findById(guardianId)
+                .orElseThrow(() -> new UserNotFoundException("보호자 정보를 찾을 수 없습니다."));
         // 1. 보호자와 연결된 환자 가져오기 (Lazy Loading 주의 -> Transactional 안이라 안전)
         User patient = guardian.getLinkedUser();
 

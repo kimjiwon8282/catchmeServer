@@ -8,5 +8,5 @@ import java.nio.file.Path;
 import java.util.List;
 
 public interface RawDataService {
-    RawDataUploadResponse uploadRawDataAsCsv(User user, List<RawSensorDataRequest> requests);
+    RawDataUploadResponse uploadRawDataAsCsv(Long userId, List<RawSensorDataRequest> requests);
 }
