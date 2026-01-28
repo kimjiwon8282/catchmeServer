@@ -84,14 +84,17 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/link/qr",
                                 "/api/predictions/history/me",
-                                "/api/predictions/latest"
+                                "/api/predictions/latest",
+                                "/api/surveys",
+                                "/api/surveys/history/me"
                         ).hasRole("USER")
                         // 3. [보호자/GUARDIAN 전용]
                         // - 환자 연결하기
                         // - 연결된 환자의 이력 조회
                         .requestMatchers(
                                 "/api/link/connect",
-                                "/api/predictions/history/patient"
+                                "/api/predictions/history/patient",
+                                "/api/surveys/history/patient"
                         ).hasRole("GUARDIAN")
 
                         // 그 외 모든 요청은 인증 필요
