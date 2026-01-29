@@ -36,7 +36,8 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 
 	// 3. DB 관련 (H2)
-	runtimeOnly 'com.h2database:h2' // <-- 얘만 있으면 됨 (h2console 불필요)
+//	runtimeOnly 'com.h2database:h2' // <-- 얘만 있으면 됨 (h2console 불필요)
+	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	// 4. 테스트 관련
 	testImplementation 'org.springframework.boot:spring-boot-starter-test' // (이름 수정됨: data-jpa-test 등은 starter-test에 포함되거나 필요시 추가)

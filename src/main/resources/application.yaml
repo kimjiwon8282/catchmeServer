@@ -2,24 +2,37 @@ spring:
   application:
     name: catchme
 
+  # [변경] MySQL Docker 연결 설정
   datasource:
-    url: jdbc:h2:mem:${H2_DB_NAME}
-    driver-class-name: org.h2.Driver
-    username: ${H2_USERNAME}
-    password: ${H2_PASSWORD}
+    # 1. rewriteBatchedStatements=true : 대량 데이터(Bulk Insert) 속도 향상 필수 옵션
+    # 2. useSSL=false, allowPublicKeyRetrieval=true : 로컬 연결 에러 방지
+    # 3. serverTimezone=Asia/Seoul : 시간대 설정
+    url: jdbc:mysql://localhost:3306/catchme?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&rewriteBatchedStatements=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
-      ddl-auto: update   # 초기 개발용
-    show-sql: true
+      # [중요] 최초 실행 시 'create'로 해서 테이블 생성 -> 데이터 넣은 후 'update'로 변경!
+      ddl-auto: create
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+        # [변경] MySQL 8.0 방언 사용 명시 (성능 최적화 도움)
+        dialect: org.hibernate.dialect.MySQL8Dialect
 
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+        # (선택) Batch Insert 시 한 번에 보낼 크기 (대량 데이터 넣을 때 도움됨)
+        jdbc:
+          batch_size: 1000
+          order_inserts: true
+          order_updates: true
+
+#  h2:
+#    console:
+#      enabled: true
+#      path: /h2-console
 
 server:
   port: ${SERVER_PORT}
