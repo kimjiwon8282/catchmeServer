@@ -10,9 +10,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,12 +53,19 @@ public class LinkServiceImpl implements LinkService {
         if (userId == null) {
             throw new IllegalArgumentException("유효하지 않거나 만료된 QR 토큰입니다.");
         }
+        // ⚡ [DB 최적화] SELECT * FROM users WHERE id IN (?, ?)
+        // 네트워크 왕복(Round Trip)을 2회 -> 1회로 단축
+        List<User> users = userRepository.findAllById(List.of(guardianId,userId));
 
-        User guardian = userRepository.findById(guardianId)
-                .orElseThrow(() -> new UserNotFoundException("보호자를 찾을 수 없습니다."));
+        if (users.size() < 2) {
+            throw new UserNotFoundException("환자 또는 보호자 정보를 찾을 수 없습니다.");
+        }
+        // List를 Map<ID, User>로 변환하여 빠르게 찾기
+        Map<Long, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("환자를 찾을 수 없습니다."));
+        User guardian = userMap.get(guardianId);
+        User user = userMap.get(userId);
 
         if (user.getRole() != Role.USER) {
             throw new IllegalStateException("QR 대상이 환자가 아닙니다.");

@@ -59,7 +59,8 @@ public class SurveyServiceImpl implements SurveyService {
     @Transactional(readOnly = true)
     @Override
     public Page<SurveyHistoryResponse> getMyHistory(Long userId, Pageable pageable) {
-        // 본인 조회는 검증 로직이 크게 필요 없으므로 바로 조회 (쿼리 절약)
+        // ✅ [최적화 효과] 아까 건 인덱스 덕분에
+        // 수십만 건이 있어도 '해당 유저'의 데이터만 Index Range Scan으로 쏙 뽑아옵니다.
         return surveyResultRepository.findAllByUserId(userId, pageable)
                 .map(SurveyHistoryResponse::from);
     }
@@ -68,10 +69,10 @@ public class SurveyServiceImpl implements SurveyService {
     @Override
     public Page<SurveyHistoryResponse> getPatientHistory(Long guardianId, Pageable pageable) {
         // 1. 보호자 영속화 (Lazy Loading 준비)
-        User guardian = userRepository.findById(guardianId)
+        User guardian = userRepository.findByIdWithLinkedUser(guardianId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
-        // 2. 환자 조회
+        // 이미 영속성 컨텍스트에 환자 정보가 로딩되어 있음 (쿼리 발생 X)
         User patient = guardian.getLinkedUser();
         if (patient == null) {
             throw new IllegalArgumentException("연결된 환자가 없습니다.");
@@ -83,6 +84,7 @@ public class SurveyServiceImpl implements SurveyService {
         }
 
         // 4. 환자의 ID로 조회
+        // 수십만 건이 있어도 '해당 유저'의 데이터만 Index Range Scan으로 쏙 뽑아옵니다.
         return surveyResultRepository.findAllByUserId(patient.getId(), pageable)
                 .map(SurveyHistoryResponse::from);
     }

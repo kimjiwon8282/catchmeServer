@@ -23,7 +23,7 @@ import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
-
+@Transactional(readOnly = true) // 1️⃣ 기본은 읽기 전용으로 설정
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -37,7 +37,7 @@ public class AuthServiceImpl implements AuthService {
     public void signup(SignupRequest request) {
 
         // 1️⃣ 이메일 중복 체크
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateEmailException("이미 존재하는 이메일입니다.");
         }//서비스는 HTTP를 모름, 오직 도메인 의미만 던짐
 

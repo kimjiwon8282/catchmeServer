@@ -35,8 +35,8 @@ public class DataSetupRunner implements CommandLineRunner {
     private final SurveyResultRepository surveyResultRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext //엔티티 매니저 주입
+    private EntityManager entityManager; //일을 처리하는 관리자
 
     // ==========================================
     // [설정값] 테스트 규모에 따라 조정 가능

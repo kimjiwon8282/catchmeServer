@@ -33,10 +33,10 @@ public class PredictionReadServiceImpl implements PredictionReadService {
      */
     @Override
     public Page<PredictionHistoryResponse> getPatientHistory(Long guardianId, Pageable pageable) {
-        // 1. 내 트랜잭션 안으로 불러오기 (영속화)
-        User guardian = userRepository.findById(guardianId)
+        // ✅ [수정] Fetch Join 사용 -> 보호자와 환자를 쿼리 한 방에 조회!
+        User guardian = userRepository.findByIdWithLinkedUser(guardianId)
                 .orElseThrow(() -> new UserNotFoundException("보호자 정보를 찾을 수 없습니다."));
-        // 1. 보호자와 연결된 환자 가져오기 (Lazy Loading 주의 -> Transactional 안이라 안전)
+        // 이미 영속성 컨텍스트에 로딩되어 있으므로 쿼리 안 나감 (0 Cost)
         User patient = guardian.getLinkedUser();
 
         // 2. 연결된 환자가 없는 경우

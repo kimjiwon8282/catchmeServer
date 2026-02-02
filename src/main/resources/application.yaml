@@ -15,11 +15,11 @@ spring:
   jpa:
     hibernate:
       # [중요] 최초 실행 시 'create'로 해서 테이블 생성 -> 데이터 넣은 후 'update'로 변경!
-      ddl-auto: create
-    show-sql: false
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        format_sql: false
+        format_sql: true
         # [변경] MySQL 8.0 방언 사용 명시 (성능 최적화 도움)
         dialect: org.hibernate.dialect.MySQL8Dialect
 

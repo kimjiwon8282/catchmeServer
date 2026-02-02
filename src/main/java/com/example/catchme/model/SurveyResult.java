@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "survey_results")
+@Table(name = "survey_results", indexes = {
+        @Index(name = "idx_survey_user_created", columnList = "user_id, created_at DESC")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SurveyResult {
 

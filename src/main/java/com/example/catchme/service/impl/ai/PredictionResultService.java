@@ -32,7 +32,7 @@ public class PredictionResultService {
         RawDataFile rawDataFile = rawDataFileRepository.findById(rawDataFileId)
                 .orElseThrow(() -> new IllegalStateException("파일을 찾을 수 없습니다."));
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithLinkedUser(userId)
                 .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다."));
 
         // 파일 상태 업데이트(분석됨)

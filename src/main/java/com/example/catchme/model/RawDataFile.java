@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "raw_data_files")
+@Table(name = "raw_data_files", indexes = {
+        @Index(name = "idx_user_created", columnList = "user_id, created_at DESC")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RawDataFile {
 

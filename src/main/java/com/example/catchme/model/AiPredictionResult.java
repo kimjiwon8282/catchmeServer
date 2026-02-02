@@ -10,7 +10,11 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "ai_prediction_results")
+// ✅ [수정] 유저별 조회 + 최신순 정렬을 위한 복합 인덱스 추가
+// 쿼리 패턴: WHERE user_id = ? ORDER BY analyzed_at DESC
+@Table(name = "ai_prediction_results", indexes = {
+        @Index(name = "idx_prediction_user_analyzed", columnList = "user_id, analyzed_at DESC")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA 필수: 빈 객체 무분별한 생성 방지
 public class AiPredictionResult {
 
