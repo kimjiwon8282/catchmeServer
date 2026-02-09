@@ -1,6 +1,10 @@
 spring:
   application:
     name: catchme
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   # [변경] MySQL Docker 연결 설정
   datasource:
@@ -37,9 +41,9 @@ spring:
 server:
   port: ${SERVER_PORT}
 
-  jwt:
-    issuer: ${JWT_ISSUER}
-    secret-key: ${JWT_SECRET_KEY}
+jwt:
+  issuer: ${JWT_ISSUER}
+  secret-key: ${JWT_SECRET_KEY}
 
 aws:
   s3:
@@ -73,8 +77,13 @@ resilience4j:
         baseConfig: default
         waitDurationInOpenState: 20s # AI 서버는 복구에 시간이 더 걸릴 수 있으므로 20초 대기
     # 2. 벌크헤드 (동시 요청 제한 - AI 서버용 필수 설정!)
-    bulkhead:
-      instances:
-        aiPrediction:
-          maxConcurrentCalls: 10 # 🔥 동시에 최대 5명까지만 AI 분석 요청 가능 (스레드 보호)
-          maxWaitDuration: 0ms  # 대기 줄(Queue) 없이 즉시 거절 (Fail Fast)
+  bulkhead:
+    instances:
+      aiPrediction:
+        maxConcurrentCalls: 10 # 🔥 동시에 최대 5명까지만 AI 분석 요청 가능 (스레드 보호)
+        maxWaitDuration: 0ms  # 대기 줄(Queue) 없이 즉시 거절 (Fail Fast)
+
+      # 2. 카카오 API용
+      kakaoApi:
+        maxConcurrentCalls: 20   # 동시에 20명까지만 지도 검색 허용
+        maxWaitDuration: 200ms   # 자리가 꽉 차면 0.2초 대기

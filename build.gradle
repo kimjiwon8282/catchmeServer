@@ -67,6 +67,9 @@ dependencies {
 	// 9. 로컬 캐싱 (Caffeine)
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'com.github.ben-manes.caffeine:caffeine'
+
+	//10.Redis 의존성 추가
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {

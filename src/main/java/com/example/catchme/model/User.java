@@ -1,5 +1,6 @@
 package com.example.catchme.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -17,7 +19,9 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User implements UserDetails {
+public class User implements UserDetails, Serializable {
+    // 1. 버전 관리를 위한 ID (Serializable 필수 요소는 아니지만 권장)
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,6 +44,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @JsonIgnore
     /** 보호자 연동 (초기 단순화) */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "linked_user_id")
@@ -68,32 +73,38 @@ public class User implements UserDetails {
        ========================= */
 
     @Override
+    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // JWT + Stateless 구조에서는 단순 권한만 있어도 충분
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));    }
 
     @Override
+    @JsonIgnore
     public String getUsername() {
         // Spring Security에서의 "username"
         return email;
     }
 
     @Override
+    @JsonIgnore
     public boolean isAccountNonExpired() {
         return true; // PoC에서는 항상 true
     }
 
     @Override
+    @JsonIgnore
     public boolean isAccountNonLocked() {
         return true; // 잠금 기능 미구현
     }
 
     @Override
+    @JsonIgnore
     public boolean isCredentialsNonExpired() {
         return true; // 비밀번호 만료 미구현
     }
 
     @Override
+    @JsonIgnore
     public boolean isEnabled() {
         return !withdrawn;
     }

@@ -8,17 +8,22 @@ import com.example.catchme.model.User;
 import com.example.catchme.repository.UserRepository;
 import com.example.catchme.service.interfaces.user.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private final CacheManager cacheManager; // ⭐️ @Primary가 붙은 RedisCacheManager가 주입됨
     @Override
     @Transactional
     public void updateName(Long userId, NameUpdateRequest request) {
@@ -29,6 +34,7 @@ public class UserServiceImpl implements UserService {
                 );
 
         user.updateName(request.getName());
+        evictCache(user.getEmail());
     }
 
     @Override
@@ -52,6 +58,8 @@ public class UserServiceImpl implements UserService {
         user.changePassword(
                 passwordEncoder.encode(request.getNewPassword())
         );
+
+        evictCache(user.getEmail());
     }
 
     @Override
@@ -64,6 +72,22 @@ public class UserServiceImpl implements UserService {
                 );
 
         user.withdraw();
+
+        evictCache(user.getEmail());
+    }
+
+    /**
+     * 🗑️ Redis 캐시 삭제 도우미 메서드
+     * - "userCache"라는 상자에서 email에 해당하는 데이터를 찾아서 지움
+     */
+    private void evictCache(String email) {
+        try {
+            // "userCache"는 UserDetailService에서 @Cacheable(value = "userCache")로 쓴 그 이름입니다.
+            Objects.requireNonNull(cacheManager.getCache("userCache")).evict(email);
+            log.info("🗑️ [Cache Evict] 사용자 정보 수정으로 캐시 삭제 완료 (email: {})", email);
+        } catch (Exception e) {
+            log.error("⚠️ [Cache Evict Error] 캐시 삭제 중 오류 발생 (email: {})", email, e);
+        }
     }
 
 }

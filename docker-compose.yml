@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  # Redis 컨테이너 설정
+  redis:
+    image: redis:alpine
+    container_name: catchme-redis
+    ports:
+      - "6379:6379" # 로컬 6379 포트 <-> 컨테이너 6379 포트 연결
+    command: redis-server --appendonly yes # 데이터 영구 저장(AOF) 활성화
+    volumes:
+      - ./redis/data:/data # 프로젝트 폴더 내 redis/data에 데이터 저장 (삭제돼도 안전)
+    restart: always
