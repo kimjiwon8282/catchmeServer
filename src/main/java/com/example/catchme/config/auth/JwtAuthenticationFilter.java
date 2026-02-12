@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // 3️⃣ JWT → Authentication 객체 생성
             Authentication authentication =
-                    tokenProvider.getAuthentication(token);
+                    tokenProvider.getAuthentication(token);//loadUserByUsername 내부적 호출
 
             // 4️⃣ SecurityContext에 인증 정보 저장
             // → 이 시점 이후로 Spring Security는

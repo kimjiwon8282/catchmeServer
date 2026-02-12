@@ -3,6 +3,7 @@ import com.example.catchme.config.externalApi.KakaoApiClient;
 import com.example.catchme.dto.HospitalResponse;
 import com.example.catchme.exception.exceptions.ExternalApiException;
 import com.example.catchme.service.interfaces.user.HospitalService;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,8 @@ public class HospitalServiceImpl implements HospitalService {
     // name: yaml에서 설정한 인스턴스 이름 ("kakaoApi")
     // fallbackMethod: 에러 발생 시 대신 실행할 메서드 이름
     @CircuitBreaker(name = "kakaoApi", fallbackMethod = "fallbackNearbyHospitals")
-    // value: CacheConfig에서 만든 저장소 이름 ("hospitals")
-    // key: 위도/경도에 1000을 곱해서 반올림 -> 문자열로 조합
+    @Bulkhead(name = "kakaoApi", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "fallbackNearbyHospitals")
+    // key: 위도/경도에 1000을 곱해서 반올림 -> 문자열로 조합, value: CacheConfig에서 만든 저장소 이름 ("hospitals")
     @Cacheable(value = "hospitals", key = "T(java.lang.Math).round(#lat * 1000) + '_' + T(java.lang.Math).round(#lng * 1000)")
     public List<HospitalResponse> findNearbyHospitals(double lat, double lng) {
         // [중요] 캐시가 적중(Hit)하면, 이 메서드는 아예 실행되지 않습니다.

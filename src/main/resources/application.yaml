@@ -1,46 +1,10 @@
 spring:
   application:
     name: catchme
-  data:
-    redis:
-      host: localhost
-      port: 6379
+  profiles:
+    active: local # 👈 기본 실행 모드를 'local'로 설정 (중요!)
 
-  # [변경] MySQL Docker 연결 설정
-  datasource:
-    # 1. rewriteBatchedStatements=true : 대량 데이터(Bulk Insert) 속도 향상 필수 옵션
-    # 2. useSSL=false, allowPublicKeyRetrieval=true : 로컬 연결 에러 방지
-    # 3. serverTimezone=Asia/Seoul : 시간대 설정
-    url: jdbc:mysql://localhost:3306/catchme?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&rewriteBatchedStatements=true
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-
-  jpa:
-    hibernate:
-      # [중요] 최초 실행 시 'create'로 해서 테이블 생성 -> 데이터 넣은 후 'update'로 변경!
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        # [변경] MySQL 8.0 방언 사용 명시 (성능 최적화 도움)
-        dialect: org.hibernate.dialect.MySQL8Dialect
-
-        # (선택) Batch Insert 시 한 번에 보낼 크기 (대량 데이터 넣을 때 도움됨)
-        jdbc:
-          batch_size: 1000
-          order_inserts: true
-          order_updates: true
-
-#  h2:
-#    console:
-#      enabled: true
-#      path: /h2-console
-
-server:
-  port: ${SERVER_PORT}
-
+# [공통] JWT, AWS, Kakao 등 환경과 무관한 키값들
 jwt:
   issuer: ${JWT_ISSUER}
   secret-key: ${JWT_SECRET_KEY}
@@ -57,33 +21,30 @@ ai:
   fastapi:
     url: ${FASTAPI_URL}
 
-# Resilience4j 서킷 브레이커 설정
+# [공통] Resilience4j (서킷 브레이커) 설정은 보통 같이 가져감
 resilience4j:
-  circuitbreaker: # 1. 서킷 브레이커 (장애 감지 및 차단)
+  circuitbreaker:
     configs:
-      default: # 기본 설정 템플릿
-        registerHealthIndicator: true  # Actuator 상태 체크에 포함
-        slidingWindowType: COUNT_BASED # 횟수 기반으로 통계 집계
-        slidingWindowSize: 10          # 최근 10번의 요청을 기록
-        minimumNumberOfCalls: 5        # 최소 5번은 호출해야 통계 계산 시작
-        failureRateThreshold: 50       # 실패율이 50% 넘으면 서킷 오픈 (차단)
-        waitDurationInOpenState: 10s   # 10초 동안은 차단 상태 유지 (API 호출 안 함)
-        permittedNumberOfCallsInHalfOpenState: 3 # 10초 후, 3번만 살짝 찔러보기 (테스트)
-
+      default:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
     instances:
-      kakaoApi: # 우리가 사용할 서킷 브레이커 이름
-        baseConfig: default # 위 설정을 상속받음
-      aiPrediction: # [NEW] AI 서버용
+      kakaoApi:
         baseConfig: default
-        waitDurationInOpenState: 20s # AI 서버는 복구에 시간이 더 걸릴 수 있으므로 20초 대기
-    # 2. 벌크헤드 (동시 요청 제한 - AI 서버용 필수 설정!)
+      aiPrediction:
+        baseConfig: default
+        waitDurationInOpenState: 20s
+
   bulkhead:
     instances:
       aiPrediction:
-        maxConcurrentCalls: 10 # 🔥 동시에 최대 5명까지만 AI 분석 요청 가능 (스레드 보호)
-        maxWaitDuration: 0ms  # 대기 줄(Queue) 없이 즉시 거절 (Fail Fast)
-
-      # 2. 카카오 API용
+        maxConcurrentCalls: 10
+        maxWaitDuration: 0ms
       kakaoApi:
-        maxConcurrentCalls: 20   # 동시에 20명까지만 지도 검색 허용
-        maxWaitDuration: 200ms   # 자리가 꽉 차면 0.2초 대기
+        maxConcurrentCalls: 20
+        maxWaitDuration: 200ms

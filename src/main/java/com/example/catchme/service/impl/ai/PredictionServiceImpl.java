@@ -31,8 +31,8 @@ public class PredictionServiceImpl implements PredictionService {
     private final UserRepository userRepository;
 
     @Override
-    @CircuitBreaker(name = "aiPrediction", fallbackMethod = "fallbackPrediction")
-    @Bulkhead(name = "aiPrediction", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "fallbackPrediction")
+//    @CircuitBreaker(name = "aiPrediction", fallbackMethod = "fallbackPrediction")
+//    @Bulkhead(name = "aiPrediction", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "fallbackPrediction")
     public AiPredictionResponse requestLatestPrediction(Long userId) {
 
         // 1. 유저 조회 (영속화 & 검증)
@@ -49,8 +49,29 @@ public class PredictionServiceImpl implements PredictionService {
         // 2. [Non-Tx] AI 서버 요청 (🐢 가장 오래 걸리는 구간 - DB 커넥션 없이 수행)
         // String(key) 대신 DTO(Request) 객체를 생성해서 전달
         AiPredictionRequest requestDto = new AiPredictionRequest(rawDataFile.getS3ObjectKey());
+
+        // =========================================================
+        // 👇 [Before Test] 가짜 지연 코드 시작 (3초 딜레이)
+        // =========================================================
+        AiPredictionResponse response = null;
+
+        try {
+            log.info("🐢 [Mock AI] 분석 요청 시작... (3초 지연 시뮬레이션)");
+
+            // 🔥 핵심: 톰캣 스레드를 3초 동안 강제로 붙잡아둠 (Thread Starvation 유발)
+            Thread.sleep(3000);
+
+            // ✅ 가짜 응답 생성 (Cluster 1, 위험군 True, 신뢰도 98.5%)
+            // DTO 필드 순서에 맞춰서 값을 넣어주세요 (예: cluster_id, is_risk, confidence)
+            response = new AiPredictionResponse(1, true, 98.5);
+
+        } catch (InterruptedException e) {
+            throw new RuntimeException("AI 분석 시뮬레이션 중 에러 발생");
+        }
+
+
         // 여기서 설정한 시간(타임아웃)이나 동시 요청 수(벌크헤드)를 넘기면 에러 발생 -> Fallback 이동
-        AiPredictionResponse response = aiPredictionClient.requestPrediction(requestDto);
+//        AiPredictionResponse response = aiPredictionClient.requestPrediction(requestDto);
 
 
         // 3. 결과 처리 위임 (저장 + 알림) -> 여기서 트랜잭션이 시작됨

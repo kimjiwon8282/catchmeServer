@@ -7,6 +7,7 @@ import com.example.catchme.service.interfaces.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,32 +19,26 @@ public class UserController {
 
     @PatchMapping("/name")
     public ResponseEntity<Void> updateName(
-            Authentication authentication,
+            @AuthenticationPrincipal User user,
             @RequestBody NameUpdateRequest request
     ) {
-        Long userId = ((com.example.catchme.model.User) authentication.getPrincipal()).getId();
-
-        userService.updateName(userId, request);
+        userService.updateName(user.getId(), request);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/password")
     public ResponseEntity<Void> updatePassword(
-            Authentication authentication,
+            @AuthenticationPrincipal User user,
             @RequestBody PasswordUpdateRequest request
     ) {
-        User user = (User) authentication.getPrincipal();
-
         userService.updatePassword(user.getId(), request);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMe(
-            Authentication authentication
+            @AuthenticationPrincipal User user
     ) {
-        User user = (User) authentication.getPrincipal();
-
         userService.deleteUser(user.getId());
 
         return ResponseEntity.noContent().build();

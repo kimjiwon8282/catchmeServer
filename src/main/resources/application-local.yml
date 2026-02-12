@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  datasource:
+    # 로컬 도커 MySQL 연결
+    url: jdbc:mysql://localhost:3306/catchme?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&rewriteBatchedStatements=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root          # 로컬은 보통 root 쓰거나 환경변수 처리
+    password: ${DB_PASSWORD} # 로컬 환경변수 또는 직접 입력
+
+  jpa:
+    hibernate:
+      ddl-auto: update # 개발할 땐 update가 편함
+    show-sql: true     # 쿼리 로그 보기
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect

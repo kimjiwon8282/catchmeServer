@@ -37,3 +37,8 @@ out/
 .vscode/
 
 redis/data/
+
+### Redis (안전장치) ###
+# 폴더 외에 혹시 모를 덤프 파일 확장자 차단
+*.rdb
+*.aof

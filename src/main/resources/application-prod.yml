@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST} # 배포 서버의 Redis 주소 (AWS ElastiCache 등)
+      port: 6379
+
+  datasource:
+    # AWS RDS 주소 예시
+    url: jdbc:mysql://${RDS_HOSTNAME}:3306/catchme?useSSL=false&serverTimezone=Asia/Seoul&rewriteBatchedStatements=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # 🚨 운영에선 절대 create/update 금지! (validate: 스키마 맞는지 확인만 함)
+    show-sql: false      # 🚨 운영에선 로그 끄기 (성능 저하 방지)
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
