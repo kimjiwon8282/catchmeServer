@@ -7,9 +7,11 @@ import com.example.catchme.model.User;
 import com.example.catchme.repository.UserRepository;
 import com.example.catchme.service.interfaces.user.LinkService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,8 +23,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LinkServiceImpl implements LinkService {
     private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;// ⚡ ConcurrentHashMap 대신 Redis 사용
+    private static final String QR_KEY_PREFIX = "QR:LINK:"; // Redis Key 구분자
+    private static final Duration QR_EXPIRATION = Duration.ofMinutes(10); // QR 유효시간 10분
 
-    private final Map<String,Long> tokenStore = new ConcurrentHashMap<>();
 
     /**
      * 환자(USER)가 QR 토큰 생성
@@ -36,8 +40,13 @@ public class LinkServiceImpl implements LinkService {
             throw new IllegalStateException("이미 보호자와 연동된 계정입니다.");
         }
 
+        // 1. 토큰 생성
         String token = UUID.randomUUID().toString();
-        tokenStore.put(token, user.getId());
+        String key = QR_KEY_PREFIX + token;
+
+        // 2. Redis에 저장 (Key: 토큰, Value: userId, TTL: 10분)
+        // -> ConcurrentHashMap.put() 대체
+        redisTemplate.opsForValue().set(key, String.valueOf(user.getId()), QR_EXPIRATION);
 
         return new QrLinkTokenResponse(token);
     }
@@ -48,11 +57,14 @@ public class LinkServiceImpl implements LinkService {
     @Override
     @Transactional
     public void connectByQr(Long guardianId, String linkToken) {
-        Long userId = tokenStore.get(linkToken);
+        String key = QR_KEY_PREFIX + linkToken;
 
-        if (userId == null) {
+        String userIdStr = redisTemplate.opsForValue().get(key);
+
+        if (userIdStr == null) {
             throw new IllegalArgumentException("유효하지 않거나 만료된 QR 토큰입니다.");
         }
+        Long userId = Long.parseLong(userIdStr);
         // ⚡ [DB 최적화] SELECT * FROM users WHERE id IN (?, ?)
         // 네트워크 왕복(Round Trip)을 2회 -> 1회로 단축
         List<User> users = userRepository.findAllById(List.of(guardianId,userId));
@@ -80,7 +92,8 @@ public class LinkServiceImpl implements LinkService {
         guardian.setLinkedUser(user);
         user.setLinkedUser(guardian);
 
-        // 1회용 토큰 제거
-        tokenStore.remove(linkToken);
+        // 5. 사용된 토큰 삭제 (재사용 방지)
+        // -> ConcurrentHashMap.remove() 대체
+        redisTemplate.delete(key);
     }
 }
