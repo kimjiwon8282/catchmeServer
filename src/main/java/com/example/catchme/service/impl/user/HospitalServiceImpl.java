@@ -11,9 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class HospitalServiceImpl implements HospitalService {
     @CircuitBreaker(name = "kakaoApi", fallbackMethod = "fallbackNearbyHospitals")
     @Bulkhead(name = "kakaoApi", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "fallbackNearbyHospitals")
     // key: 위도/경도에 1000을 곱해서 반올림 -> 문자열로 조합, value: CacheConfig에서 만든 저장소 이름 ("hospitals")
-    @Cacheable(value = "hospitals", key = "T(java.lang.Math).round(#lat * 1000) + '_' + T(java.lang.Math).round(#lng * 1000)")
+    @Cacheable(value = "hospitals", key = "T(java.lang.Math).round(#lat * 1000) + '_' + T(java.lang.Math).round(#lng * 1000)",cacheManager = "redisCacheManager")
     public List<HospitalResponse> findNearbyHospitals(double lat, double lng) {
         // [중요] 캐시가 적중(Hit)하면, 이 메서드는 아예 실행되지 않습니다.
         log.info("🚀 [Service] 카카오 API 호출 시도 (lat: {}, lng: {})", lat, lng);
@@ -43,7 +45,7 @@ public class HospitalServiceImpl implements HospitalService {
 
             // 1. Body Null 체크
             if (response == null || !response.containsKey("documents")) {
-                return List.of();
+                return new ArrayList<>(); //수정: Jackson이 역직렬화할 수 있는 일반 ArrayList 반환
             }
 
             List<Map<String, Object>> documents = (List<Map<String, Object>>) response.get("documents");
@@ -57,7 +59,7 @@ public class HospitalServiceImpl implements HospitalService {
                             Double.parseDouble(String.valueOf(doc.get("x"))),
                             Integer.parseInt(String.valueOf(doc.get("distance")))
                     ))
-                    .toList();
+                    .collect(Collectors.toList()); // 수정: 명시적으로 변형 가능한 List 반환
 
         } catch (Exception e) {
             // RestClient는 에러 발생 시 HttpClientErrorException 등을 던집니다.
@@ -82,6 +84,4 @@ public class HospitalServiceImpl implements HospitalService {
         // 상황에 따라 "일시적 장애로 조회 불가" 같은 더미 데이터를 줄 수도 있음
         return Collections.emptyList();
     }
-
-
 }

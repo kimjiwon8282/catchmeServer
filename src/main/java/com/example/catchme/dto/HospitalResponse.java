@@ -2,8 +2,10 @@ package com.example.catchme.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor//Redis에서 JSON을 객체로 조립할 때 반드시 필요함
 @AllArgsConstructor
 public class HospitalResponse {
 

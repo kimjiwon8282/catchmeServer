@@ -39,6 +39,7 @@ public class RedisCacheConfig {
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
+                .withCacheConfiguration("hospitals", config.entryTtl(Duration.ofDays(1)))
                 .build();
     }
 }
