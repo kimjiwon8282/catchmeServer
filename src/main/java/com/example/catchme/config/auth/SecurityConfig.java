@@ -86,7 +86,8 @@ public class SecurityConfig {
                                 "/api/predictions/history/me",
                                 "/api/predictions/latest",
                                 "/api/surveys",
-                                "/api/surveys/history/me"
+                                "/api/surveys/history/me",
+                                "/api/raw-data"
                         ).hasRole("USER")
                         // 3. [보호자/GUARDIAN 전용]
                         // - 환자 연결하기

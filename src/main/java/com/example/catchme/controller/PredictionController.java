@@ -1,6 +1,5 @@
 package com.example.catchme.controller;
 
-import com.example.catchme.dto.AiPredictionResponse;
 import com.example.catchme.dto.PredictionHistoryResponse;
 import com.example.catchme.model.User;
 import com.example.catchme.service.interfaces.ai.PredictionService;
@@ -26,10 +25,11 @@ public class PredictionController {
     private final PredictionReadService predictionReadService;
 
     @PostMapping("/latest")
-    public ResponseEntity<AiPredictionResponse> predictLatest(
+    public ResponseEntity<String> predictLatest(
             @AuthenticationPrincipal User user
     ) {
-        return ResponseEntity.ok(
+        // HTTP 202 Accepted: "요청은 접수되었으나, 처리는 아직 완료되지 않음"을 의미하는 비동기 표준 상태 코드입니다.
+        return ResponseEntity.accepted().body(
                 predictionService.requestLatestPrediction(user.getId())
         );
     }

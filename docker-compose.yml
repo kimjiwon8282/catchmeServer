@@ -10,3 +10,27 @@ services:
     volumes:
       - ./redis/data:/data # 프로젝트 폴더 내 redis/data에 데이터 저장 (삭제돼도 안전)
     restart: always
+  # RabbitMQ 컨테이너 설정 (redis 설정 바로 아래에 추가)
+#  rabbitmq:
+#    image: rabbitmq:3-management-alpine # 관리자 대시보드(management)가 포함된 경량화 버전
+#    container_name: catchme-rabbitmq
+#    ports:
+#      - "5672:5672"   # 스프링 부트(애플리케이션)가 데이터를 주고받을 포트
+#      - "15672:15672" # 개발자가 눈으로 큐(Queue)를 확인할 수 있는 관리자 대시보드 웹 포트
+#    environment:
+#      RABBITMQ_DEFAULT_USER: catchme      # 접속 아이디
+#      RABBITMQ_DEFAULT_PASS: catchme123!  # 접속 비밀번호
+#    volumes:
+#      - ./rabbitmq/data:/var/lib/rabbitmq # 컨테이너가 꺼져도 메시지가 날아가지 않도록 볼륨 마운트
+#    restart: always
+  localstack:
+    image: localstack/localstack:latest
+    container_name: catchme-localstack
+    ports:
+      - "4566:4566"  # LocalStack이 가짜 AWS API를 제공하는 포트
+    environment:
+      - SERVICES=sqs # 무거운 전체 서비스 말고 SQS만 가볍게 띄움
+      - DEFAULT_REGION=ap-northeast-2
+      - AWS_ACCESS_KEY_ID=test     # 로컬용 가짜 키
+      - AWS_SECRET_ACCESS_KEY=test # 로컬용 가짜 키
+    restart: always

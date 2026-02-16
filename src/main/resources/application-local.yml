@@ -6,7 +6,16 @@ spring:
     redis:
       host: localhost
       port: 6379
-
+  # ▼▼▼ SQS 로컬스택 연결 설정 ▼▼▼
+  cloud:
+    aws:
+      credentials:
+        access-key: test # LocalStack 가짜 키
+        secret-key: test # LocalStack 가짜 키
+      region:
+        static: ap-northeast-2
+      sqs:
+        endpoint: http://localhost:4566 # 🚨 핵심: 진짜 AWS 말고 여기로 가라!
   datasource:
     # 로컬 도커 MySQL 연결
     url: jdbc:mysql://localhost:3306/catchme?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&rewriteBatchedStatements=true

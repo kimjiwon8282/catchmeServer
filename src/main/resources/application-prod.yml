@@ -2,6 +2,14 @@ server:
   port: 8080
 
 spring:
+  # ▼▼▼ SQS 운영 환경 설정 (진짜 AWS 연결) ▼▼▼
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2 # 서울 리전 명시
+      # 🚨 보안을 위해 credentials(access/secret key)는 절대 적지 않습니다! (EC2 IAM Role 사용)
+      # 🚨 endpoint도 적지 않습니다! (알아서 진짜 AWS SQS 주소로 찾아갑니다)
+
   data:
     redis:
       host: ${REDIS_HOST} # 배포 서버의 Redis 주소 (AWS ElastiCache 등)

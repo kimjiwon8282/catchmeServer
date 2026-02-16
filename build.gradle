@@ -70,6 +70,9 @@ dependencies {
 
 	//10.Redis 의존성 추가
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// 11. [추가] Spring Cloud AWS SQS 라이브러리 추가
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs:3.1.0'
 }
 
 tasks.named('test') {

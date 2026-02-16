@@ -1,13 +1,14 @@
 package com.example.catchme.service.impl.ai;
 
 import com.example.catchme.dto.AiPredictionResponse;
+import com.example.catchme.dto.notification.NotificationEvent;
 import com.example.catchme.model.AiPredictionResult;
 import com.example.catchme.model.RawDataFile;
 import com.example.catchme.model.User;
 import com.example.catchme.repository.AiPredictionResultRepository;
 import com.example.catchme.repository.RawDataFileRepository;
 import com.example.catchme.repository.UserRepository;
-import com.example.catchme.service.interfaces.notification.NotificationService;
+import com.example.catchme.service.impl.notification.NotificationProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class PredictionResultService {
 
     private final RawDataFileRepository rawDataFileRepository;
-    private final NotificationService notificationService; // ✅ 알림 서비스 주입
     private final UserRepository userRepository; // ✅ 유저 조회를 위해 주입
     private final AiPredictionResultRepository aiPredictionResultRepository; // ✅ 결과 저장을 위한 리포지토리 주입
+    private final NotificationProducer notificationProducer;
+
     /**
      * 역할: 결과 저장 및 위험군 알림 발송 (트랜잭션 필수)
      */
@@ -56,12 +58,10 @@ public class PredictionResultService {
 
             // 보호자가 있고 + 토큰도 있을 때만 발송 (없으면 그냥 조용히 넘어감)
             if (guardian != null && guardian.getFcmToken() != null) {
-                notificationService.sendRiskAlert(
-                        guardian.getFcmToken(),
-                        user.getName()
-                );
+                // 직접 쏘지 않고 편지 봉투(DTO)를 만들어서 프로듀서에게 던집니다!
+                NotificationEvent event = new NotificationEvent(guardian.getFcmToken(), user.getName());
+                notificationProducer.sendNotificationEvent(event);
             } else {
-                // (선택) 디버깅용 로그 정도는 남겨두면 좋습니다.
                 log.info("ℹ️ 위험군 감지됨. (알림 미발송: 보호자 없음 or 토큰 없음)");
             }
         }
