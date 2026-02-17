@@ -71,9 +71,8 @@
 
 ---
 
-## 5. ERD 및 API 명세
-* [ERD 링크 삽입]
-* [API 문서(Swagger / Postman) 링크 삽입]
+## 5. API 명세
+* [Postman API Documentation](https://documenter.getpostman.com/view/42108335/2sBXcDFgVN)
 
 ## 6. 팀원 및 역할
 
