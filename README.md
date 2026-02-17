@@ -1,17 +1,17 @@
 # CatchMe - 스마트 인솔 기반 보행 데이터 분석 및 신경계 질환 예측 플랫폼 API 서버
 
 ## 1. 프로젝트 개요
-CatchMe는 스마트 인솔에서 수집된 족압 및 가속도 데이터를 기반으로 환자의 보행 패턴을 분석하고, 이상 징후 감지 시 보호자에게 실시간 알림을 제공하는 헬스케어 백엔드 시스템입니다. 환자의 생명과 직결될 수 있는 크리티컬한 데이터를 다루는 만큼, **데이터 무결성, 고가용성(High Availability), 그리고 대규모 트래픽 환경에서의 성능 최적화**에 중점을 두고 아키텍처를 설계했습니다.
+스마트 깔창에서 수집된 족압 및 가속도 데이터를 기반으로 환자의 보행 패턴을 분석하고, 이상 징후 감지 시 보호자에게 실시간 알림을 제공하는 헬스케어 백엔드 시스템. 환자의 건강과 직결될 수 있는 데이터를 다루는 만큼, **데이터 무결성, 고가용성(High Availability), 그리고 대규모 트래픽 환경에서의 성능 최적화**에 중점을 두고 아키텍처를 설계함.
 
 ## 2. 기술 스택
-* **Language & Framework**: Java 17, Spring Boot 3.x, Spring Security, Spring Data JPA
+* **Language & Framework**: Java 17, Spring Boot, Spring Security, Spring Data JPA
 * **Database & Caching**: MySQL, Redis (Caffeine Cache 혼용)
 * **Infrastructure & Messaging**: AWS S3, AWS SQS (LocalStack), Docker, Docker-compose
 * **External API**: Firebase Cloud Messaging (FCM), Kakao Local API
 
 ## 3. 시스템 아키텍처
 
-*(여기에 전체 시스템 아키텍처 다이어그램 이미지를 삽입하세요)*
+<img width="547" height="257" alt="스크린샷 2026-01-18 171523" src="https://github.com/user-attachments/assets/222863cc-e37f-4625-9268-6ba68b3dbec1" />
 
 ---
 
@@ -76,4 +76,16 @@ CatchMe는 스마트 인솔에서 수집된 족압 및 가속도 데이터를 �
 * [API 문서(Swagger / Postman) 링크 삽입]
 
 ## 6. 팀원 및 역할
-* [이름] - 백엔드 아키텍처 설계, 인프라 구축, 핵심 비즈니스 로직 개발
+
+* **김지원 (Backend Lead)** * 전체 백엔드 아키텍처 설계 및 인프라 구축
+  * 핵심 비즈니스 로직 개발 및 DB 조회 성능 최적화 (복합 인덱스, Fetch Join)
+  * Redis, AWS SQS 도입을 통한 대규모 트래픽 분산 처리 및 장애 대응 설계
+* **신영서 (Backend & DevOps)** * 백엔드 API 공동 개발 및 도메인 로직 구현
+  * 클라우드 인프라 운영 환경 구축 및 DevOps 아키텍처 구성
+* **하지형 (Frontend / React Native)**
+  * React Native 기반 모바일 애플리케이션 UI/UX 개발
+  * 백엔드 API 통신 연동 및 클라이언트 상태 관리
+* **임은혜 (AI Engineer)**
+  * 스마트 인솔 센서(족압, 가속도) 데이터 기반 신경계 질환 위험군 예측 모델 개발 및 학습
+* **박수현 (Hardware Engineer)**
+  * 스마트 인솔 디바이스 설계 및 센서 데이터 수집/전송 모듈 하드웨어 제작
