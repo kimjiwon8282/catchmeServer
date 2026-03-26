@@ -40,8 +40,10 @@ dependencies {
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	// 4. 테스트 관련
-	testImplementation 'org.springframework.boot:spring-boot-starter-test' // (이름 수정됨: data-jpa-test 등은 starter-test에 포함되거나 필요시 추가)
-	testImplementation 'org.springframework.security:spring-security-test' // (이름 수정됨)
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
 
 	// *참고: 테스트 의존성이 너무 복잡하게 쪼개져 있어서, 보통은 아래처럼 뭉뚱그려 씁니다.
 	// 기존 코드 그대로 두셔도 되지만, 에러나면 'org.springframework.boot:spring-boot-starter-test' 하나로 퉁치세요.
