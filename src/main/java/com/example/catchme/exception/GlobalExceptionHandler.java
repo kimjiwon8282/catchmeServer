@@ -4,7 +4,6 @@ import com.example.catchme.exception.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -46,33 +45,71 @@ public class GlobalExceptionHandler {
     ) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
     }
-    //비밀번호 변경 시 예외 발생
+
+    /**
+     * 비밀번호 변경 시 예외 발생
+     * → 401 Unauthorized
+     */
     @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidPassword(
             InvalidPasswordException e
     ) {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
-    //cvs 파일 생성 시 예외 발생
+
+    /**
+     * CSV 파일 생성 실패
+     * → 500 Internal Server Error
+     */
     @ExceptionHandler(IllegalCsvCreateException.class)
     public ResponseEntity<Map<String, Object>> handleCsvCreateFail(
             IllegalCsvCreateException e
     ) {
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
-    //csv파일 로컬 삭제 실패
+
+    /**
+     * CSV 파일 로컬 삭제 실패
+     * → 500 Internal Server Error
+     */
     @ExceptionHandler(LocalFileDeleteFailException.class)
     public ResponseEntity<Map<String, Object>> handleLocalFileDeleteFail(
             LocalFileDeleteFailException e
-    ){
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+    ) {
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
+    /**
+     * S3 업로드 실패
+     * → 500 Internal Server Error
+     */
     @ExceptionHandler(S3UploadFailException.class)
     public ResponseEntity<Map<String, Object>> handleS3UploadFail(
             S3UploadFailException e
-    ){
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+    ) {
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
+    /**
+     * Raw 데이터는 S3에 저장되었지만 DB 메타데이터 저장 실패
+     * → 500 Internal Server Error
+     */
+    @ExceptionHandler(RawDataMetadataSaveFailException.class)
+    public ResponseEntity<Map<String, Object>> handleRawDataMetadataSaveFail(
+            RawDataMetadataSaveFailException e
+    ) {
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
+    /**
+     * 외부 API 호출 실패
+     * → 502 Bad Gateway
+     */
+    @ExceptionHandler(ExternalApiException.class)
+    public ResponseEntity<Map<String, Object>> handleExternalApi(
+            ExternalApiException e
+    ) {
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY, e.getMessage());
     }
 
     /**
@@ -98,6 +135,36 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * @RequestBody가 없거나 JSON 형식이 잘못되었을 때
+     * → 400 Bad Request
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonParseError(
+            HttpMessageNotReadableException e
+    ) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "요청 본문(Body)이 비어있거나 형식이 올바르지 않습니다."
+        );
+    }
+
+    /**
+     * @Valid 검증 실패 시
+     * → 400 Bad Request
+     */
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<Map<String, Object>> handleBindException(
+            BindException e
+    ) {
+        String errorMessage = e.getBindingResult()
+                .getAllErrors()
+                .get(0)
+                .getDefaultMessage();
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    /**
      * 그 외 예측하지 못한 예외
      * → 500 Internal Server Error
      */
@@ -111,44 +178,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(ExternalApiException.class)
-    public ResponseEntity<Map<String, Object>> handleExternalApi(
-            ExternalApiException e
-    ) {
-        return buildErrorResponse(
-                HttpStatus.BAD_GATEWAY,
-                e.getMessage()
-        );
-    }
-
-    /**
-     * @RequestBody가 없거나 JSON 형식이 잘못되었을 때
-     * → 400 Bad Request
-     */
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, Object>> handleJsonParseError(
-            HttpMessageNotReadableException e
-    ) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "요청 본문(Body)이 비어있거나 형식이 올바르지 않습니다.");
-    }
-
-    /**
-     * @Valid 검증 실패 시 (@ModelAttribute)
-     * → 400 Bad Request 및 에러 메시지 반환
-     */
-    @ExceptionHandler(BindException.class)
-    public ResponseEntity<Map<String, Object>> handleBindException(BindException e) {
-        String errorMessage = e.getBindingResult()
-                .getAllErrors()
-                .get(0) // 첫 번째 에러 메시지만 보여줌
-                .getDefaultMessage();
-
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
-    }
-
-    /* =========================
-       공통 에러 응답 생성 메서드
-       ========================= */
     private ResponseEntity<Map<String, Object>> buildErrorResponse(
             HttpStatus status,
             String message
