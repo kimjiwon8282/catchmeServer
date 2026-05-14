@@ -52,6 +52,13 @@ public class RawDataUploadJobServiceImpl implements RawDataUploadJobService {
         uploadJob.markCompleted();
     }
 
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markRecoveryFailed(Long uploadJobId, Exception e) {
+        RawDataUploadJob uploadJob = getUploadJob(uploadJobId);
+        uploadJob.markRecoveryFailed(toFailureReason(e));
+    }
+
     private RawDataUploadJob getUploadJob(Long uploadJobId) {
         return rawDataUploadJobRepository.findById(uploadJobId)
                 .orElseThrow(() -> new IllegalArgumentException("업로드 작업을 찾을 수 없습니다."));

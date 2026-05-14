@@ -7,5 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface RawDataFileRepository extends JpaRepository<RawDataFile, Long> {
+
     Optional<RawDataFile> findTopByUserOrderByCreatedAtDesc(User user);
-} //유저 기준, createdAt 최신 1건
+
+    boolean existsByS3ObjectKey(String s3ObjectKey);
+}

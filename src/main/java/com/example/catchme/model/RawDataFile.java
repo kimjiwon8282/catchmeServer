@@ -20,19 +20,19 @@ public class RawDataFile {
     private Long id;
 
     /** 소유 사용자 */
-    @ManyToOne(fetch = FetchType.LAZY) //User중심 설계
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     /** S3 object key (파일 실제 위치) */
-    @Column(nullable = false, length = 500)
-    private String s3ObjectKey; //objectKey만 저장, 파일은 S3책임
+    @Column(nullable = false, length = 500, unique = true)
+    private String s3ObjectKey;
 
     /** 업로드 시각 */
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    /** 분석 여부 (확장 대비) */
+    /** 분석 여부 */
     @Column(nullable = false)
     private boolean analyzed;
 

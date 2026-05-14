@@ -14,4 +14,6 @@ public interface RawDataUploadJobService {
     void markDbSaveFailed(Long uploadJobId, Exception e);
 
     void markCompleted(Long uploadJobId);
+
+    void markRecoveryFailed(Long uploadJobId, Exception e);
 }
