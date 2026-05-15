@@ -5,6 +5,7 @@ import com.example.catchme.dto.RawSensorDataRequest;
 import com.example.catchme.exception.exceptions.IllegalCsvCreateException;
 import com.example.catchme.exception.exceptions.LocalFileDeleteFailException;
 import com.example.catchme.exception.exceptions.RawDataMetadataSaveFailException;
+import com.example.catchme.exception.exceptions.S3UploadFailException;
 import com.example.catchme.exception.exceptions.UserNotFoundException;
 import com.example.catchme.model.RawDataUploadJob;
 import com.example.catchme.model.User;
@@ -28,6 +29,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RawDataServiceImpl implements RawDataService {
 
+    private static final int MAX_S3_UPLOAD_RETRY_COUNT = 3;
+
     private final FileStorageService fileStorageService;
     private final RawDataMetadataService rawDataMetadataService;
     private final RawDataUploadJobService rawDataUploadJobService;
@@ -50,11 +53,15 @@ public class RawDataServiceImpl implements RawDataService {
             uploadJob = rawDataUploadJobService.createPendingJob(user, objectKey);
 
             try {
-                fileStorageService.uploadCsv(csvPath, objectKey);
+                uploadCsvWithRetry(csvPath, objectKey);
                 rawDataUploadJobService.markS3Uploaded(uploadJob.getId());
             } catch (Exception e) {
                 recordS3UploadFailed(uploadJob, e);
-                throw e;
+
+                throw new S3UploadFailException(
+                        "Raw 데이터 S3 업로드에 실패했습니다.",
+                        e
+                );
             }
 
             try {
@@ -74,6 +81,24 @@ public class RawDataServiceImpl implements RawDataService {
         } finally {
             deleteLocalFile(csvPath);
         }
+    }
+
+    private void uploadCsvWithRetry(Path csvPath, String objectKey) {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= MAX_S3_UPLOAD_RETRY_COUNT; attempt++) {
+            try {
+                fileStorageService.uploadCsv(csvPath, objectKey);
+                return;
+            } catch (Exception e) {
+                lastException = e;
+            }
+        }
+
+        throw new S3UploadFailException(
+                "Raw 데이터 S3 업로드에 " + MAX_S3_UPLOAD_RETRY_COUNT + "회 실패했습니다.",
+                lastException
+        );
     }
 
     private void recordS3UploadFailed(RawDataUploadJob uploadJob, Exception originalException) {

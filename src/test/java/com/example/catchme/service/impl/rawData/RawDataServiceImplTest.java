@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,9 +35,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -122,6 +123,7 @@ class RawDataServiceImplTest {
 
             verify(rawDataUploadJobService, never()).markS3UploadFailed(eq(1L), any(Exception.class));
             verify(rawDataUploadJobService, never()).markDbSaveFailed(eq(1L), any(Exception.class));
+            verify(rawDataUploadJobService, never()).markRecoveryFailed(eq(1L), any(Exception.class));
             verify(fileStorageService, never()).deleteIfExists(anyString());
         }
 
@@ -166,15 +168,65 @@ class RawDataServiceImplTest {
         }
 
         @Test
-        @DisplayName("S3 업로드에 실패하면 S3_UPLOAD_FAILED 상태로 기록하고 메타데이터 저장은 하지 않는다")
-        void uploadRawDataAsCsvMarksS3UploadFailedWhenS3UploadFails() {
+        @DisplayName("S3 업로드가 일시적으로 실패해도 3회 이내 성공하면 S3_UPLOADED와 COMPLETED 상태로 진행한다")
+        void uploadRawDataAsCsvRetriesS3UploadAndSucceeds() {
             Long userId = 1L;
             User user = user(userId, "user@catchme.com");
             List<RawSensorDataRequest> requests = List.of(
                     rawSensorDataRequest("2026-03-26T10:00:00", 10, 20, 30, 40, 0.111, 0.222, 0.333)
             );
 
-            S3UploadFailException s3Exception = new S3UploadFailException("S3 업로드에 실패했습니다.");
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+            when(rawDataUploadJobService.createPendingJob(eq(user), anyString()))
+                    .thenAnswer(invocation -> {
+                        String objectKey = invocation.getArgument(1);
+                        return uploadJob(1L, user, objectKey);
+                    });
+
+            AtomicInteger attempt = new AtomicInteger(0);
+
+            when(fileStorageService.uploadCsv(any(Path.class), anyString()))
+                    .thenAnswer(invocation -> {
+                        int currentAttempt = attempt.incrementAndGet();
+
+                        if (currentAttempt < 3) {
+                            throw new RuntimeException("temporary s3 error");
+                        }
+
+                        return invocation.getArgument(1);
+                    });
+
+            RawDataUploadResponse response = rawDataService.uploadRawDataAsCsv(userId, requests);
+
+            ArgumentCaptor<String> objectKeyCaptor = ArgumentCaptor.forClass(String.class);
+            verify(fileStorageService, times(3)).uploadCsv(any(Path.class), objectKeyCaptor.capture());
+
+            String objectKey = objectKeyCaptor.getAllValues().get(0);
+
+            assertThat(response.getObjectKey()).isEqualTo(objectKey);
+            assertThat(attempt.get()).isEqualTo(3);
+
+            verify(rawDataUploadJobService).createPendingJob(user, objectKey);
+            verify(rawDataUploadJobService).markS3Uploaded(1L);
+            verify(rawDataMetadataService).save(user, objectKey);
+            verify(rawDataUploadJobService).markCompleted(1L);
+
+            verify(rawDataUploadJobService, never()).markS3UploadFailed(any(), any(Exception.class));
+            verify(rawDataUploadJobService, never()).markDbSaveFailed(any(), any(Exception.class));
+            verify(fileStorageService, never()).deleteIfExists(anyString());
+        }
+
+        @Test
+        @DisplayName("S3 업로드가 3회 모두 실패하면 S3_UPLOAD_FAILED 상태로 기록하고 S3UploadFailException을 던진다")
+        void uploadRawDataAsCsvWrapsS3UploadFailureAfterThreeAttempts() {
+            Long userId = 1L;
+            User user = user(userId, "user@catchme.com");
+            List<RawSensorDataRequest> requests = List.of(
+                    rawSensorDataRequest("2026-03-26T10:00:00", 10, 20, 30, 40, 0.111, 0.222, 0.333)
+            );
+
+            RuntimeException originalException = new RuntimeException("low level s3 error");
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
@@ -185,15 +237,17 @@ class RawDataServiceImplTest {
                     });
 
             when(fileStorageService.uploadCsv(any(Path.class), anyString()))
-                    .thenThrow(s3Exception);
+                    .thenThrow(originalException);
 
             assertThatThrownBy(() -> rawDataService.uploadRawDataAsCsv(userId, requests))
-                    .isSameAs(s3Exception);
+                    .isInstanceOf(S3UploadFailException.class)
+                    .hasMessage("Raw 데이터 S3 업로드에 실패했습니다.")
+                    .hasCauseInstanceOf(S3UploadFailException.class);
 
             verify(rawDataUploadJobService).createPendingJob(eq(user), anyString());
-            verify(fileStorageService).uploadCsv(any(Path.class), anyString());
+            verify(fileStorageService, times(3)).uploadCsv(any(Path.class), anyString());
 
-            verify(rawDataUploadJobService).markS3UploadFailed(1L, s3Exception);
+            verify(rawDataUploadJobService).markS3UploadFailed(eq(1L), any(S3UploadFailException.class));
 
             verify(rawDataUploadJobService, never()).markS3Uploaded(any());
             verify(rawDataMetadataService, never()).save(any(User.class), anyString());

@@ -5,4 +5,8 @@ public class S3UploadFailException extends RuntimeException {
     public S3UploadFailException(String message) {
         super(message);
     }
+
+    public S3UploadFailException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

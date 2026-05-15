@@ -136,6 +136,25 @@ class RawDataUploadJobServiceImplTest {
         }
 
         @Test
+        @DisplayName("markRecoveryFailed는 상태를 RECOVERY_FAILED로 변경하고 retryCount를 증가시킨다")
+        void markRecoveryFailed() {
+            RawDataUploadJob uploadJob = uploadJob(1L);
+            RuntimeException exception = new RuntimeException("recovery failed");
+
+            when(rawDataUploadJobRepository.findById(1L))
+                    .thenReturn(Optional.of(uploadJob));
+
+            rawDataUploadJobService.markRecoveryFailed(1L, exception);
+
+            assertThat(uploadJob.getStatus()).isEqualTo(RawDataUploadStatus.RECOVERY_FAILED);
+            assertThat(uploadJob.getFailureReason()).isEqualTo("recovery failed");
+            assertThat(uploadJob.getRetryCount()).isEqualTo(1);
+            assertThat(uploadJob.getLastRetryAt()).isNotNull();
+
+            verify(rawDataUploadJobRepository).findById(1L);
+        }
+
+        @Test
         @DisplayName("실패 사유가 비어 있으면 예외 클래스명을 저장한다")
         void markDbSaveFailedUsesExceptionClassNameWhenMessageIsBlank() {
             RawDataUploadJob uploadJob = uploadJob(1L);
