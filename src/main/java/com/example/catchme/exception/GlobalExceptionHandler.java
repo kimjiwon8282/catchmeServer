@@ -81,13 +81,23 @@ public class GlobalExceptionHandler {
 
     /**
      * S3 업로드 실패
-     * → 500 Internal Server Error
+     * → 503 Service Unavailable
+     * → 프론트 재전송 대상
      */
     @ExceptionHandler(S3UploadFailException.class)
     public ResponseEntity<Map<String, Object>> handleS3UploadFail(
             S3UploadFailException e
     ) {
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(
+                        Map.of(
+                                "status", HttpStatus.SERVICE_UNAVAILABLE.value(),
+                                "error", "S3_UPLOAD_FAILED",
+                                "message", "Raw 데이터 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
+                                "retryable", true
+                        )
+                );
     }
 
     /**

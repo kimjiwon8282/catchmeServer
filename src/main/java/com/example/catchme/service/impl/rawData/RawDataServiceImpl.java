@@ -48,7 +48,7 @@ public class RawDataServiceImpl implements RawDataService {
         try {
             csvPath = createCsv(user, requests);
 
-            objectKey = buildObjectKey(user);
+            objectKey = buildObjectKey();
 
             uploadJob = rawDataUploadJobService.createPendingJob(user, objectKey);
 
@@ -157,11 +157,13 @@ public class RawDataServiceImpl implements RawDataService {
         }
     }
 
-    private String buildObjectKey(User user) {
-        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String uuid = UUID.randomUUID().toString().substring(0, 8);
+    private String buildObjectKey() {
+        String datePath = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
 
-        return "raw-data/user-" + user.getId() + "/" + now + "_" + uuid + ".csv";
+        String uuid = UUID.randomUUID().toString();
+
+        return "raw-data/" + datePath + "/" + uuid + ".csv";
     }
 
     private void deleteLocalFile(Path csvPath) {

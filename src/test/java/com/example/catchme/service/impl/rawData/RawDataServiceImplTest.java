@@ -105,9 +105,10 @@ class RawDataServiceImplTest {
 
             assertThat(response.getObjectKey()).isEqualTo(objectKey);
             assertThat(objectKey)
-                    .startsWith("raw-data/user-1/")
-                    .endsWith(".csv");
-            assertThat(objectKey).contains("_");
+                    .startsWith("raw-data/")
+                    .endsWith(".csv")
+                    .matches("^raw-data/\\d{4}/\\d{2}/\\d{2}/[0-9a-f\\-]{36}\\.csv$");
+            assertThat(objectKey).doesNotContain("user-");
 
             assertThat(csvContent.get())
                     .contains("timestamp,p1,p2,p3,p4,acc_x,acc_y,acc_z")

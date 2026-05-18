@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 
 import java.nio.file.Path;
 
@@ -30,6 +31,7 @@ public class S3FileStorageServiceImpl implements FileStorageService {
                     .bucket(bucket)
                     .key(objectKey)
                     .contentType("text/csv")
+                    .serverSideEncryption(ServerSideEncryption.AES256)
                     .build();
 
             s3Client.putObject(request, RequestBody.fromFile(filePath));
