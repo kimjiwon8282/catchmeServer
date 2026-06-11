@@ -27,7 +27,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
-@Profile("!test")
+@Profile("!test & !perf-cache & !perf-nocache")
 @RequiredArgsConstructor
 public class DataSetupRunner implements CommandLineRunner {
 

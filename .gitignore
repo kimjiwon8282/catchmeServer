@@ -44,3 +44,6 @@ redis/data/
 *.aof
 
 rabbitmq/data/
+
+performance/k6/results/*.json
+!performance/k6/results/.gitkeep
