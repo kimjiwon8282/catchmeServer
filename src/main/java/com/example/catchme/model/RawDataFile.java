@@ -1,6 +1,15 @@
 package com.example.catchme.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,32 +28,28 @@ public class RawDataFile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 소유 사용자 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Member member;
 
-    /** S3 object key (파일 실제 위치) */
     @Column(nullable = false, length = 500, unique = true)
     private String s3ObjectKey;
 
-    /** 업로드 시각 */
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    /** 분석 여부 */
     @Column(nullable = false)
     private boolean analyzed;
 
-    private RawDataFile(User user, String s3ObjectKey) {
-        this.user = user;
+    private RawDataFile(Member member, String s3ObjectKey) {
+        this.member = member;
         this.s3ObjectKey = s3ObjectKey;
         this.createdAt = LocalDateTime.now();
         this.analyzed = false;
     }
 
-    public static RawDataFile create(User user, String s3ObjectKey) {
-        return new RawDataFile(user, s3ObjectKey);
+    public static RawDataFile create(Member member, String s3ObjectKey) {
+        return new RawDataFile(member, s3ObjectKey);
     }
 
     public void markAnalyzed() {

@@ -1,6 +1,17 @@
 package com.example.catchme.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,39 +31,33 @@ public class SurveyResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /* ==========================
-       연관 관계
-       ========================== */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Member member;
 
-    /* ==========================
-       설문 데이터
-       ========================== */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SurveyType type; // SMCQ 인지 K-AD8 인지
+    private SurveyType type;
 
     @Column(nullable = false)
-    private int totalScore; // 총점
+    private int totalScore;
 
     @Column(nullable = false)
-    private boolean isRisk; // 위험군 판정 여부 (true: 위험, false: 정상)
+    private boolean isRisk;
 
     @Column(columnDefinition = "TEXT")
-    private String answersJson; // 상세 답변 (예: {"1":1, "2":0 ...}) - 확장성 고려
+    private String answersJson;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt; // 검사 일시
+    private LocalDateTime createdAt;
 
     @Builder
-    public SurveyResult(User user, SurveyType type, int totalScore, boolean isRisk, String answersJson) {
-        this.user = user;
+    public SurveyResult(Member member, SurveyType type, int totalScore, boolean isRisk, String answersJson) {
+        this.member = member;
         this.type = type;
         this.totalScore = totalScore;
         this.isRisk = isRisk;
         this.answersJson = answersJson;
-        this.createdAt = LocalDateTime.now(); // 생성 시 현재 시간 자동 기록
+        this.createdAt = LocalDateTime.now();
     }
 }

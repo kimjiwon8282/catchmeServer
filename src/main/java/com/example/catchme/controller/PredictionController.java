@@ -1,7 +1,7 @@
 package com.example.catchme.controller;
 
+import com.example.catchme.config.auth.MemberPrincipal;
 import com.example.catchme.dto.PredictionHistoryResponse;
-import com.example.catchme.model.User;
 import com.example.catchme.service.interfaces.ai.PredictionService;
 import com.example.catchme.service.interfaces.user.PredictionReadService;
 import lombok.RequiredArgsConstructor;
@@ -26,28 +26,26 @@ public class PredictionController {
 
     @PostMapping("/latest")
     public ResponseEntity<String> predictLatest(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        // HTTP 202 Accepted: "요청은 접수되었으나, 처리는 아직 완료되지 않음"을 의미하는 비동기 표준 상태 코드입니다.
         return ResponseEntity.accepted().body(
-                predictionService.requestLatestPrediction(user.getId())
+                predictionService.requestLatestPrediction(principal.getMemberId())
         );
     }
 
-    // 환자 본인 기록 조회
     @GetMapping("/history/me")
     public ResponseEntity<Page<PredictionHistoryResponse>> getMyHistory(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal MemberPrincipal principal,
             @PageableDefault(size = 10, sort = "analyzedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(predictionReadService.getMyHistory(user.getId(), pageable));
+        return ResponseEntity.ok(predictionReadService.getMyHistory(principal.getMemberId(), pageable));
     }
-    // 보호자가 환자 기록 조회
+
     @GetMapping("/history/patient")
     public ResponseEntity<Page<PredictionHistoryResponse>> getPatientHistory(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal MemberPrincipal principal,
             @PageableDefault(size = 10, sort = "analyzedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(predictionReadService.getPatientHistory(user.getId(), pageable));
+        return ResponseEntity.ok(predictionReadService.getPatientHistory(principal.getMemberId(), pageable));
     }
 }

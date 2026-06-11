@@ -1,11 +1,11 @@
 package com.example.catchme.service.interfaces.rawData;
 
 import com.example.catchme.model.RawDataUploadJob;
-import com.example.catchme.model.User;
+import com.example.catchme.model.Member;
 
 public interface RawDataUploadJobService {
 
-    RawDataUploadJob createPendingJob(User user, String objectKey);
+    RawDataUploadJob createPendingJob(Member member, String objectKey);
 
     void markS3Uploaded(Long uploadJobId);
 

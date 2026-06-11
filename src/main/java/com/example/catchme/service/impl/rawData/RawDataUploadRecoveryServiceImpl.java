@@ -38,7 +38,7 @@ public class RawDataUploadRecoveryServiceImpl implements RawDataUploadRecoverySe
         String objectKey = uploadJob.getS3ObjectKey();
 
         if (!rawDataFileRepository.existsByS3ObjectKey(objectKey)) {
-            rawDataMetadataService.save(uploadJob.getUser(), objectKey);
+            rawDataMetadataService.save(uploadJob.getMember(), objectKey);
         }
 
         uploadJob.markCompleted();

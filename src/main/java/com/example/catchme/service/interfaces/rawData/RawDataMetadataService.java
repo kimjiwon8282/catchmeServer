@@ -1,7 +1,7 @@
 package com.example.catchme.service.interfaces.rawData;
 
-import com.example.catchme.model.User;
+import com.example.catchme.model.Member;
 
 public interface RawDataMetadataService {
-    public void save(User user, String objectKey);
+    void save(Member member, String objectKey);
 }

@@ -1,7 +1,7 @@
 package com.example.catchme.service.impl.rawData;
 
+import com.example.catchme.model.Member;
 import com.example.catchme.model.RawDataUploadJob;
-import com.example.catchme.model.User;
 import com.example.catchme.repository.RawDataUploadJobRepository;
 import com.example.catchme.service.interfaces.rawData.RawDataUploadJobService;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +19,8 @@ public class RawDataUploadJobServiceImpl implements RawDataUploadJobService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public RawDataUploadJob createPendingJob(User user, String objectKey) {
-        RawDataUploadJob uploadJob = RawDataUploadJob.create(user, objectKey);
+    public RawDataUploadJob createPendingJob(Member member, String objectKey) {
+        RawDataUploadJob uploadJob = RawDataUploadJob.create(member, objectKey);
         return rawDataUploadJobRepository.save(uploadJob);
     }
 

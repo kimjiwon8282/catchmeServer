@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SurveyResultRepository extends JpaRepository<SurveyResult, Long> {
 
-    Page<SurveyResult> findAllByUserId(Long userId, Pageable pageable);
+    Page<SurveyResult> findAllByMemberId(Long memberId, Pageable pageable);
 }

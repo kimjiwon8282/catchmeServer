@@ -1,6 +1,17 @@
 package com.example.catchme.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,25 +31,20 @@ public class RawDataUploadJob {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 업로드 요청 사용자 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Member member;
 
-    /** S3 object key */
     @Column(name = "s3_object_key", nullable = false, length = 500)
     private String s3ObjectKey;
 
-    /** 업로드 작업 상태 */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private RawDataUploadStatus status;
 
-    /** 실패 사유 */
     @Column(name = "failure_reason", length = 1000)
     private String failureReason;
 
-    /** 재시도 횟수 */
     @Column(name = "retry_count", nullable = false)
     private int retryCount;
 
@@ -51,8 +57,8 @@ public class RawDataUploadJob {
     @Column(name = "last_retry_at")
     private LocalDateTime lastRetryAt;
 
-    private RawDataUploadJob(User user, String s3ObjectKey) {
-        this.user = user;
+    private RawDataUploadJob(Member member, String s3ObjectKey) {
+        this.member = member;
         this.s3ObjectKey = s3ObjectKey;
         this.status = RawDataUploadStatus.PENDING;
         this.retryCount = 0;
@@ -60,8 +66,8 @@ public class RawDataUploadJob {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public static RawDataUploadJob create(User user, String s3ObjectKey) {
-        return new RawDataUploadJob(user, s3ObjectKey);
+    public static RawDataUploadJob create(Member member, String s3ObjectKey) {
+        return new RawDataUploadJob(member, s3ObjectKey);
     }
 
     public void markS3Uploaded() {

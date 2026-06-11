@@ -7,9 +7,9 @@ import com.example.catchme.exception.exceptions.LocalFileDeleteFailException;
 import com.example.catchme.exception.exceptions.RawDataMetadataSaveFailException;
 import com.example.catchme.exception.exceptions.S3UploadFailException;
 import com.example.catchme.exception.exceptions.UserNotFoundException;
+import com.example.catchme.model.Member;
 import com.example.catchme.model.RawDataUploadJob;
-import com.example.catchme.model.User;
-import com.example.catchme.repository.UserRepository;
+import com.example.catchme.repository.MemberRepository;
 import com.example.catchme.service.interfaces.rawData.FileStorageService;
 import com.example.catchme.service.interfaces.rawData.RawDataMetadataService;
 import com.example.catchme.service.interfaces.rawData.RawDataService;
@@ -34,11 +34,11 @@ public class RawDataServiceImpl implements RawDataService {
     private final FileStorageService fileStorageService;
     private final RawDataMetadataService rawDataMetadataService;
     private final RawDataUploadJobService rawDataUploadJobService;
-    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
 
     @Override
     public RawDataUploadResponse uploadRawDataAsCsv(Long userId, List<RawSensorDataRequest> requests) {
-        User user = userRepository.findById(userId)
+        Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         Path csvPath = null;
@@ -46,30 +46,23 @@ public class RawDataServiceImpl implements RawDataService {
         RawDataUploadJob uploadJob = null;
 
         try {
-            csvPath = createCsv(user, requests);
-
+            csvPath = createCsv(member, requests);
             objectKey = buildObjectKey();
-
-            uploadJob = rawDataUploadJobService.createPendingJob(user, objectKey);
+            uploadJob = rawDataUploadJobService.createPendingJob(member, objectKey);
 
             try {
                 uploadCsvWithRetry(csvPath, objectKey);
                 rawDataUploadJobService.markS3Uploaded(uploadJob.getId());
             } catch (Exception e) {
                 recordS3UploadFailed(uploadJob, e);
-
-                throw new S3UploadFailException(
-                        "Raw 데이터 S3 업로드에 실패했습니다.",
-                        e
-                );
+                throw new S3UploadFailException("Raw 데이터 S3 업로드에 실패했습니다.", e);
             }
 
             try {
-                rawDataMetadataService.save(user, objectKey);
+                rawDataMetadataService.save(member, objectKey);
                 rawDataUploadJobService.markCompleted(uploadJob.getId());
             } catch (Exception e) {
                 recordDbSaveFailed(uploadJob, e);
-
                 throw new RawDataMetadataSaveFailException(
                         "Raw 데이터는 S3에 저장되었지만 메타데이터 저장에 실패했습니다. 이후 복구 작업을 통해 재처리됩니다.",
                         e
@@ -125,10 +118,10 @@ public class RawDataServiceImpl implements RawDataService {
         }
     }
 
-    private Path createCsv(User user, List<RawSensorDataRequest> requests) {
+    private Path createCsv(Member member, List<RawSensorDataRequest> requests) {
         try {
             Path tempFile = Files.createTempFile(
-                    "raw-data-user-" + user.getId() + "-",
+                    "raw-data-user-" + member.getId() + "-",
                     ".csv"
             );
 
@@ -174,9 +167,7 @@ public class RawDataServiceImpl implements RawDataService {
         try {
             Files.deleteIfExists(csvPath);
         } catch (Exception e) {
-            throw new LocalFileDeleteFailException(
-                    "업로드 후 로컬 CSV 삭제에 실패했습니다."
-            );
+            throw new LocalFileDeleteFailException("업로드 후 로컬 CSV 삭제에 실패했습니다.");
         }
     }
 }

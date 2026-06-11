@@ -2,7 +2,7 @@ package com.example.catchme.controller;
 
 import com.example.catchme.dto.QrLinkConnectRequest;
 import com.example.catchme.dto.QrLinkTokenResponse;
-import com.example.catchme.model.User;
+import com.example.catchme.config.auth.MemberPrincipal;
 import com.example.catchme.service.interfaces.user.LinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +21,9 @@ public class LinkController {
      */
     @PostMapping("/qr")
     public QrLinkTokenResponse generateQr(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal MemberPrincipal principal
     ){
-        return linkService.generateQrToken(user.getId());
+        return linkService.generateQrToken(principal.getMemberId());
     }
 
     /**
@@ -31,10 +31,10 @@ public class LinkController {
      */
     @PostMapping("/connect")
     public ResponseEntity<Void> connect(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal MemberPrincipal principal,
             @RequestBody QrLinkConnectRequest linkToken
     ) {
-        linkService.connectByQr(user.getId(), linkToken.getLinkToken());
+        linkService.connectByQr(principal.getMemberId(), linkToken.getLinkToken());
         return ResponseEntity.ok().build();
     }
 }

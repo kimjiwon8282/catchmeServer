@@ -18,27 +18,18 @@ import java.time.Duration;
 @EnableCaching
 public class RedisCacheConfig {
 
-    /**
-     * 인증(로그인) 정보 전용 Redis 캐시 매니저
-     * - 빈 이름: "redisCacheManager"
-     * - 용도: UserDetails 객체 캐싱
-     */
-    @Bean(name = "redisCacheManager") // ⭐️ 빈 이름을 명시해서 Caffeine과 구분
-    @Primary // @Cacheable을 쓸 때 cacheManager를 명시 안 하면 기본으로 얘를 씀
+    @Bean(name = "redisCacheManager")
+    @Primary
     public CacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
-
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                // 1. 유효 시간: 60분 (로그인 세션 유지 시간과 맞춤)
                 .entryTtl(Duration.ofMinutes(60))
-                // 2. null 값 금지 (불필요한 데이터 방지)
                 .disableCachingNullValues()
-                // 3. Key 직렬화: String (Redis-cli에서 보기 편함)
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                // 4. Value 직렬화: JSON (사람이 읽을 수 있는 형태)
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
+                .withCacheConfiguration("memberAuthCache", config.entryTtl(Duration.ofMinutes(30)))
                 .withCacheConfiguration("hospitals", config.entryTtl(Duration.ofDays(1)))
                 .build();
     }

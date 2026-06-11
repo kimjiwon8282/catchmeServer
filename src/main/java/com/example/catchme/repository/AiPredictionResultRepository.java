@@ -11,5 +11,5 @@ public interface AiPredictionResultRepository extends JpaRepository<AiPrediction
 
     // 페이징 쿼리 (Pageable에 정렬 조건이 포함되므로 OrderBy 생략 가능)
     // select * from result where user_id = ? limit ?, ?
-    Page<AiPredictionResult> findAllByUserId(Long userId, Pageable pageable);
+    Page<AiPredictionResult> findAllByMemberId(Long memberId, Pageable pageable);
 }
