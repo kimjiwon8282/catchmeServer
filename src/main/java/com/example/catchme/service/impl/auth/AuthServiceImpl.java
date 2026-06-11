@@ -5,6 +5,7 @@ import com.example.catchme.config.auth.TokenProvider;
 import com.example.catchme.dto.LoginRequest;
 import com.example.catchme.dto.LoginResponse;
 import com.example.catchme.dto.SignupRequest;
+import com.example.catchme.dto.SignupRole;
 import com.example.catchme.exception.exceptions.DuplicateEmailException;
 import com.example.catchme.exception.exceptions.InvalidLoginException;
 import com.example.catchme.exception.exceptions.UserNotFoundException;
@@ -14,6 +15,7 @@ import com.example.catchme.repository.MemberRepository;
 import com.example.catchme.service.interfaces.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -44,10 +46,7 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateEmailException("이미 존재하는 이메일입니다.");
         }
 
-        Role role = request.getRole();
-        if (role == null) {
-            role = Role.USER;
-        }
+        Role role = toDomainRole(request.getRole());
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
@@ -58,7 +57,11 @@ public class AuthServiceImpl implements AuthService {
                 .role(role)
                 .build();
 
-        memberRepository.save(member);
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateEmailException("?대? 議댁옱?섎뒗 ?대찓?쇱엯?덈떎.");
+        }
     }
 
     @Transactional
@@ -88,5 +91,12 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = tokenProvider.generateToken(member, ACCESS_TOKEN_DURATION);
 
         return new LoginResponse(accessToken, member.getRole().name());
+    }
+
+    private Role toDomainRole(SignupRole role) {
+        return switch (role) {
+            case USER -> Role.USER;
+            case GUARDIAN -> Role.GUARDIAN;
+        };
     }
 }

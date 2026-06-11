@@ -9,7 +9,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -24,7 +23,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TokenProvider {
@@ -60,20 +58,6 @@ public class TokenProvider {
                 .compact();
     }
 
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
-
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            log.debug("Invalid JWT token: {}", e.getMessage());
-            return false;
-        }
-    }
-
     public Authentication getAuthentication(String token) {
         Claims claims = getClaims(token);
 
@@ -97,12 +81,9 @@ public class TokenProvider {
         );
     }
 
-    public Long getUserId(String token) {
-        return getClaims(token).get("id", Long.class);
-    }
-
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()
+                .requireIssuer(jwtProperties.getIssuer())
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)

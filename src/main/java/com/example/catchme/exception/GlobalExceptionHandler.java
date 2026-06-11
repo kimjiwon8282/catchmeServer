@@ -5,10 +5,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -172,6 +174,37 @@ public class GlobalExceptionHandler {
                 .getDefaultMessage();
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException e
+    ) {
+        String errorMessage = e.getBindingResult()
+                .getAllErrors()
+                .get(0)
+                .getDefaultMessage();
+        Map<String, String> fieldErrors = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        fieldError -> fieldError.getField(),
+                        fieldError -> fieldError.getDefaultMessage() == null
+                                ? "요청 값이 올바르지 않습니다."
+                                : fieldError.getDefaultMessage(),
+                        (first, second) -> first
+                ));
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(
+                        Map.of(
+                                "status", HttpStatus.BAD_REQUEST.value(),
+                                "error", HttpStatus.BAD_REQUEST.name(),
+                                "message", errorMessage,
+                                "fields", fieldErrors
+                        )
+                );
     }
 
     /**

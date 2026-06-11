@@ -9,6 +9,7 @@ import com.example.catchme.dto.LoginRequest;
 import com.example.catchme.dto.NameUpdateRequest;
 import com.example.catchme.dto.PasswordUpdateRequest;
 import com.example.catchme.dto.SignupRequest;
+import com.example.catchme.dto.SignupRole;
 import com.example.catchme.model.Member;
 import com.example.catchme.model.Role;
 import com.example.catchme.repository.MemberRepository;
@@ -41,7 +42,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Duration;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -113,20 +121,205 @@ class AuthIntegrationTest {
     void signupAndLoginUseMemberTableAndReturnAccessToken() throws Exception {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(newSignup("signup@catchme.com", "pw1234", "tester", Role.USER))))
+                        .content(json(newSignup("signup@catchme.com", "pw12345678", "tester", SignupRole.USER))))
                 .andExpect(status().isCreated());
 
         Member saved = memberRepository.findByEmail("signup@catchme.com").orElseThrow();
         assertThat(saved.getEmail()).isEqualTo("signup@catchme.com");
-        assertThat(saved.getPassword()).isNotEqualTo("pw1234");
+        assertThat(saved.getPassword()).isNotEqualTo("pw12345678");
         assertThat(saved.getRole()).isEqualTo(Role.USER);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new LoginRequest("signup@catchme.com", "pw1234", null))))
+                        .content(json(new LoginRequest("signup@catchme.com", "pw12345678", null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.role").value("USER"));
+    }
+
+    @Test
+    void publicSignupAcceptsOnlySignupRolesAndDoesNotPersistInvalidRequests() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(newSignup("user-role@catchme.com", "pw12345678", "user", SignupRole.USER))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(newSignup("guardian-role@catchme.com", "pw12345678", "guardian", SignupRole.GUARDIAN))))
+                .andExpect(status().isCreated());
+
+        assertThat(memberRepository.findByEmail("user-role@catchme.com").orElseThrow().getRole()).isEqualTo(Role.USER);
+        assertThat(memberRepository.findByEmail("guardian-role@catchme.com").orElseThrow().getRole()).isEqualTo(Role.GUARDIAN);
+        assertThat(memberRepository.count()).isEqualTo(2);
+
+        assertBadSignupDoesNotCreate(signupJson("missing-role@catchme.com", "pw12345678", "missing", null));
+        assertBadSignupDoesNotCreate("""
+                {
+                  "email": "unknown-role@catchme.com",
+                  "password": "pw12345678",
+                  "name": "unknown",
+                  "role": "UNKNOWN"
+                }
+                """);
+        assertBadSignupDoesNotCreate("""
+                {
+                  "email": "admin-role@catchme.com",
+                  "password": "pw12345678",
+                  "name": "admin",
+                  "role": "ADMIN"
+                }
+                """);
+
+        assertThat(memberRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void signupValidationRejectsInvalidInputAndDoesNotPersistMembers() throws Exception {
+        assertBadSignupDoesNotCreate(signupJson("", "pw12345678", "tester", "USER"));
+        assertBadSignupDoesNotCreate(signupJson("   ", "pw12345678", "tester", "USER"));
+        assertBadSignupDoesNotCreate(signupJson("invalid-email", "pw12345678", "tester", "USER"));
+        assertBadSignupDoesNotCreate(signupJson("empty-password@catchme.com", "", "tester", "USER"));
+        assertBadSignupDoesNotCreate(signupJson("short-password@catchme.com", "pw1234", "tester", "USER"));
+        assertBadSignupDoesNotCreate(signupJson("empty-name@catchme.com", "pw12345678", "", "USER"));
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupJson("valid-signup@catchme.com", "pw12345678", "tester", "USER")))
+                .andExpect(status().isCreated());
+
+        assertThat(memberRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void loginValidationReturnsBadRequestButAuthenticationFailureStaysUnauthorized() throws Exception {
+        saveMember("login-validation@catchme.com", "pw12345678", Role.USER);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "pw12345678"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("invalid-email", "pw12345678", null))))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "login-validation@catchme.com"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("login-validation@catchme.com", "   ", null))))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("login-validation@catchme.com", "pw12345678", null))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("login-validation@catchme.com", "wrong-password", null))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginAcceptsFcmTokenUpToFiveHundredCharactersAndRejectsLongerWithoutUpdatingDb() throws Exception {
+        Member member = saveMember("fcm@catchme.com", "pw12345678", Role.USER);
+        String fiveHundredChars = "a".repeat(500);
+        String fiveHundredOneChars = "b".repeat(501);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("fcm@catchme.com", "pw12345678", null))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "fcm@catchme.com",
+                                  "password": "pw12345678"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("fcm@catchme.com", "pw12345678", fiveHundredChars))))
+                .andExpect(status().isOk());
+        assertThat(memberRepository.findById(member.getId()).orElseThrow().getFcmToken()).isEqualTo(fiveHundredChars);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("fcm@catchme.com", "pw12345678", fiveHundredOneChars))))
+                .andExpect(status().isBadRequest());
+        assertThat(memberRepository.findById(member.getId()).orElseThrow().getFcmToken()).isEqualTo(fiveHundredChars);
+    }
+
+    @Test
+    void duplicateSignupReturnsConflictAndKeepsSingleMember() throws Exception {
+        String requestBody = signupJson("duplicate@catchme.com", "pw12345678", "tester", "USER");
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isConflict());
+
+        assertThat(countMembersByEmail("duplicate@catchme.com")).isEqualTo(1);
+    }
+
+    @Test
+    void concurrentDuplicateSignupReturnsCreatedAndConflictAndKeepsSingleMember() throws Exception {
+        String email = "concurrent-duplicate@catchme.com";
+        String requestBody = signupJson(email, "pw12345678", "tester", "USER");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        Callable<Integer> signup = () -> {
+            ready.countDown();
+            start.await(5, TimeUnit.SECONDS);
+            return mockMvc.perform(post("/api/auth/signup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus();
+        };
+
+        try {
+            Future<Integer> first = executor.submit(signup);
+            Future<Integer> second = executor.submit(signup);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<Integer> statuses = List.of(
+                    first.get(10, TimeUnit.SECONDS),
+                    second.get(10, TimeUnit.SECONDS)
+            );
+
+            assertThat(statuses).containsExactlyInAnyOrder(201, 409);
+            assertThat(countMembersByEmail(email)).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -160,6 +353,14 @@ class AuthIntegrationTest {
 
         mockMvc.perform(get("/api/test/ping").header("Authorization", bearer(validToken)))
                 .andExpect(status().isOk());
+
+        String tokenWithoutIssuer = generateTokenWithIssuer(member, null, Duration.ofHours(1));
+        mockMvc.perform(get("/api/test/ping").header("Authorization", bearer(tokenWithoutIssuer)))
+                .andExpect(status().isUnauthorized());
+
+        String tokenWithWrongIssuer = generateTokenWithIssuer(member, "wrong-issuer", Duration.ofHours(1));
+        mockMvc.perform(get("/api/test/ping").header("Authorization", bearer(tokenWithWrongIssuer)))
+                .andExpect(status().isUnauthorized());
 
         String expiredToken = tokenProvider.generateToken(member, Duration.ofSeconds(-1));
         mockMvc.perform(get("/api/test/ping").header("Authorization", bearer(expiredToken)))
@@ -316,7 +517,7 @@ class AuthIntegrationTest {
         return memberRepository.saveAndFlush(member);
     }
 
-    private SignupRequest newSignup(String email, String password, String name, Role role) throws Exception {
+    private SignupRequest newSignup(String email, String password, String name, SignupRole role) throws Exception {
         SignupRequest request = new SignupRequest();
         setField(request, "email", email);
         setField(request, "password", password);
@@ -343,6 +544,35 @@ class AuthIntegrationTest {
         return AUTH_CACHE + "::" + memberId;
     }
 
+    private long countMembersByEmail(String email) {
+        return memberRepository.findAll()
+                .stream()
+                .filter(member -> member.getEmail().equals(email))
+                .count();
+    }
+
+    private void assertBadSignupDoesNotCreate(String requestBody) throws Exception {
+        long before = memberRepository.count();
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+
+        assertThat(memberRepository.count()).isEqualTo(before);
+    }
+
+    private String signupJson(String email, String password, String name, String role) throws Exception {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("email", email);
+        values.put("password", password);
+        values.put("name", name);
+        if (role != null) {
+            values.put("role", role);
+        }
+        return json(values);
+    }
+
     private String generateTokenWithoutIdClaim(String email, Role role, Duration duration) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + duration.toMillis());
@@ -354,6 +584,26 @@ class AuthIntegrationTest {
                 .setExpiration(expiry)
                 .setSubject(email)
                 .claim("auth", "ROLE_" + role.name())
+                .signWith(signingKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    private String generateTokenWithIssuer(Member member, String issuer, Duration duration) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + duration.toMillis());
+        var builder = Jwts.builder()
+                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .setSubject(member.getEmail())
+                .claim("id", member.getId())
+                .claim("auth", "ROLE_" + member.getRole().name());
+
+        if (issuer != null) {
+            builder.setIssuer(issuer);
+        }
+
+        return builder
                 .signWith(signingKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
