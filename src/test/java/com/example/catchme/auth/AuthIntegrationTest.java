@@ -33,6 +33,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -57,6 +58,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -232,6 +234,114 @@ class AuthIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new LoginRequest("login-validation@catchme.com", "wrong-password", null))))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void authErrorResponsesUseUnifiedJsonShapeAndPermitAllStillIgnoresBadJwt() throws Exception {
+        expectErrorWithFields(
+                mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupJson("", "pw12345678", "tester", "USER"))),
+                400,
+                "BAD_REQUEST",
+                "email"
+        );
+
+        expectErrorWithoutFields(
+                mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "admin-json@catchme.com",
+                                  "password": "pw12345678",
+                                  "name": "admin",
+                                  "role": "ADMIN"
+                                }
+                                """)),
+                400,
+                "BAD_REQUEST"
+        );
+
+        String duplicateRequest = signupJson("json-duplicate@catchme.com", "pw12345678", "tester", "USER");
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(duplicateRequest))
+                .andExpect(status().isCreated());
+        expectErrorWithoutFields(
+                mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(duplicateRequest)),
+                409,
+                "CONFLICT"
+        ).andExpect(jsonPath("$.message").value("이미 존재하는 이메일입니다."));
+
+        saveMember("json-login@catchme.com", "pw12345678", Role.USER);
+        expectErrorWithoutFields(
+                mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("json-login@catchme.com", "wrong-password", null)))),
+                401,
+                "UNAUTHORIZED"
+        );
+
+        Member jwtMember = saveMember("json-jwt@catchme.com", "pw1234", Role.USER);
+        String validToken = tokenProvider.generateToken(jwtMember, Duration.ofHours(1));
+        expectErrorWithoutFields(
+                mockMvc.perform(get("/api/test/ping")),
+                401,
+                "UNAUTHORIZED"
+        );
+        expectErrorWithoutFields(
+                mockMvc.perform(get("/api/test/ping")
+                        .header("Authorization", bearer(tokenProvider.generateToken(jwtMember, Duration.ofSeconds(-1))))),
+                401,
+                "UNAUTHORIZED"
+        );
+        expectErrorWithoutFields(
+                mockMvc.perform(get("/api/test/ping")
+                        .header("Authorization", bearer(validToken + "x"))),
+                401,
+                "UNAUTHORIZED"
+        );
+        expectErrorWithoutFields(
+                mockMvc.perform(get("/api/test/ping")
+                        .header("Authorization", bearer(generateTokenWithIssuer(jwtMember, "wrong-issuer", Duration.ofHours(1))))),
+                401,
+                "UNAUTHORIZED"
+        );
+        expectErrorWithoutFields(
+                mockMvc.perform(get("/api/test/ping")
+                        .header("Authorization", bearer(generateTokenWithoutIdClaim(jwtMember.getEmail(), Role.USER, Duration.ofHours(1))))),
+                401,
+                "UNAUTHORIZED"
+        );
+
+        jwtMember.withdraw();
+        memberRepository.saveAndFlush(jwtMember);
+        redisTemplate.delete(cacheKey(jwtMember.getId()));
+        expectErrorWithoutFields(
+                mockMvc.perform(get("/api/test/ping")
+                        .header("Authorization", bearer(validToken))),
+                401,
+                "UNAUTHORIZED"
+        );
+
+        Member roleUser = saveMember("json-role-user@catchme.com", "pw1234", Role.USER);
+        expectErrorWithoutFields(
+                mockMvc.perform(post("/api/link/connect")
+                        .header("Authorization", bearer(tokenProvider.generateToken(roleUser, Duration.ofHours(1))))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("linkToken", "any")))),
+                403,
+                "FORBIDDEN"
+        );
+
+        mockMvc.perform(post("/api/auth/login")
+                        .header("Authorization", bearer("bad-token"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new LoginRequest("json-login@catchme.com", "pw12345678", null))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty());
     }
 
     @Test
@@ -542,6 +652,35 @@ class AuthIntegrationTest {
 
     private String cacheKey(Long memberId) {
         return AUTH_CACHE + "::" + memberId;
+    }
+
+    private ResultActions expectErrorWithoutFields(
+            ResultActions result,
+            int statusCode,
+            String error
+    ) throws Exception {
+        return result
+                .andExpect(status().is(statusCode))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(statusCode))
+                .andExpect(jsonPath("$.error").value(error))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.fields").doesNotExist());
+    }
+
+    private ResultActions expectErrorWithFields(
+            ResultActions result,
+            int statusCode,
+            String error,
+            String fieldName
+    ) throws Exception {
+        return result
+                .andExpect(status().is(statusCode))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(statusCode))
+                .andExpect(jsonPath("$.error").value(error))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.fields." + fieldName).exists());
     }
 
     private long countMembersByEmail(String email) {

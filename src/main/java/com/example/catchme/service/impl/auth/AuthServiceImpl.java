@@ -60,7 +60,7 @@ public class AuthServiceImpl implements AuthService {
         try {
             memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicateEmailException("?대? 議댁옱?섎뒗 ?대찓?쇱엯?덈떎.");
+            throw new DuplicateEmailException("이미 존재하는 이메일입니다.");
         }
     }
 
