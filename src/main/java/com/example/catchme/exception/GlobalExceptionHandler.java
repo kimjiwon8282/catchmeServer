@@ -7,6 +7,7 @@ import com.example.catchme.exception.exceptions.IllegalCsvCreateException;
 import com.example.catchme.exception.exceptions.InvalidLoginException;
 import com.example.catchme.exception.exceptions.InvalidPasswordException;
 import com.example.catchme.exception.exceptions.LocalFileDeleteFailException;
+import com.example.catchme.exception.exceptions.QrServiceUnavailableException;
 import com.example.catchme.exception.exceptions.RawDataMetadataSaveFailException;
 import com.example.catchme.exception.exceptions.S3UploadFailException;
 import com.example.catchme.exception.exceptions.UserNotFoundException;
@@ -71,6 +72,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RawDataMetadataSaveFailException.class)
     public ResponseEntity<ErrorResponse> handleRawDataMetadataSaveFail(RawDataMetadataSaveFailException e) {
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
+    @ExceptionHandler(QrServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleQrServiceUnavailable(QrServiceUnavailableException e) {
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 
     @ExceptionHandler(ExternalApiException.class)
